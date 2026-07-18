@@ -24,6 +24,8 @@ export interface ToxicHandle {
   apply(input: AddToxicInput): Promise<Toxic>;
   /** Remove one toxic early (e.g. to model recovery mid-test). */
   remove(proxy: AddToxicInput['proxy'], name: string): Promise<void>;
+  /** Remove every toxic THIS test applied (mid-test recovery; no-op if none). */
+  removeAllApplied(): Promise<void>;
 }
 
 interface Fixtures {
@@ -89,6 +91,13 @@ export const test = base.extend<Fixtures>({
         await removeToxic(proxy, name);
         const i = applied.findIndex((t) => t.proxy === proxy && t.name === name);
         if (i >= 0) applied.splice(i, 1);
+      },
+      async removeAllApplied() {
+        while (applied.length > 0) {
+          // applied is non-empty inside the loop; shift() cannot return undefined.
+          const t = applied.shift() as { proxy: AddToxicInput['proxy']; name: string };
+          await removeToxic(t.proxy, t.name);
+        }
       },
     };
 
