@@ -30,6 +30,7 @@ const BALANCE_SETTLED = '99499.50';
 interface Hold {
   id: string;
   state: string;
+  transactionId: string;
 }
 
 test.describe('RS-09 asymmetric partition', () => {
@@ -38,7 +39,11 @@ test.describe('RS-09 asymmetric partition', () => {
     clientPlane,
     opsPlane,
     control,
+    cleanSimState,
   }) => {
+    // Clears the global one-shot screeningNext slot (cross-test poisoning
+    // guard — see RS-06).
+    void cleanSimState;
     const fx = await provisionFundedClient(control, { depositAmount: DEPOSIT });
 
     // A flagged withdrawal parked in HELD, before any partition.
@@ -62,7 +67,7 @@ test.describe('RS-09 asymmetric partition', () => {
     });
     expect(approval.body?.state).toBe('HELD');
     const holds = await control.get<{ items: Hold[] }>('/holds?state=OPEN&limit=100');
-    const hold = holds.body?.items.find((h) => JSON.stringify(h).includes(txId));
+    const hold = holds.body?.items.find((h) => h.transactionId === txId);
     if (hold === undefined) throw new Error('no OPEN hold found for the flagged withdrawal');
 
     // The partition: clients go dark; operations do not.
