@@ -1,16 +1,16 @@
 /**
- * RS-00 (scaffolding smoke — precondition for every other scenario)
+ * RS-00 (scaffolding smoke - precondition for every other scenario)
  *
  * Failure injected:   latency 1500ms on client-plane only (then removed).
  * Expected behaviour: degraded plane slows by >= the toxic latency; control
  *                     plane stays fast and truthful throughout.
- * Invariant:          the harness itself is sound — all planes reach the same
+ * Invariant:          the harness itself is sound - all planes reach the same
  *                     seeded VaultChain; toxics apply and remove cleanly; the
  *                     control plane is provably unaffected by client-plane
  *                     toxics (observation integrity, ADR-0002).
  * Falsification:      plant a toxic via the raw Toxiproxy API (bypassing the
- *                     fixture) — leak detection must fail the next test; or
- *                     assert fast-path timing with the toxic still applied —
+ *                     fixture) - leak detection must fail the next test; or
+ *                     assert fast-path timing with the toxic still applied -
  *                     the FAST_PATH_CEILING_MS assertions must fail.
  *                     (Verified manually for M1; harness automates this in M2.)
  */
@@ -20,7 +20,7 @@ import { expect, test } from './fixtures/index.js';
 /**
  * SMOKE_LATENCY_MS: large enough that a toxified round-trip is unambiguously
  * distinguishable from CI noise (healthy < FAST_PATH_CEILING_MS asserted
- * below, 3x margin), small enough to keep the suite quick. No jitter —
+ * below, 3x margin), small enough to keep the suite quick. No jitter -
  * deterministic.
  */
 const SMOKE_LATENCY_MS = 1_500;
@@ -88,7 +88,7 @@ test.describe('RS-00 stack smoke', () => {
     expect(degraded.status).toBe(200);
     expect(performance.now() - t1).toBeGreaterThanOrEqual(SMOKE_LATENCY_MS);
 
-    // ...while the control plane — same upstream, different proxy — is untouched.
+    // ...while the control plane - same upstream, different proxy - is untouched.
     const t2 = performance.now();
     expect((await control.get('/health')).status).toBe(200);
     expect(performance.now() - t2).toBeLessThan(FAST_PATH_CEILING_MS);
@@ -118,7 +118,7 @@ test.describe('RS-00 stack smoke', () => {
 
     // Prove the plane is actually dark, or this test is vacuous: a budgeted
     // probe must abort. (A healthy plane answers in < FAST_PATH_CEILING_MS,
-    // 3x under this budget — the abort can only come from the toxic.)
+    // 3x under this budget - the abort can only come from the toxic.)
     await expect(clientPlane.get('/health', { budgetMs: DARK_PROBE_BUDGET_MS })).rejects.toThrow(
       /timeout|abort/i,
     );
@@ -139,7 +139,7 @@ test.describe('RS-00 stack smoke', () => {
 
   test('auth is enforced identically through a proxy plane', async ({ clientPlane }) => {
     // A CLIENT key must not reach the admin-only simulator surface through any
-    // plane (requireRole('ADMIN') on /simulator/* — VaultChain src/routes/simulator.ts).
+    // plane (requireRole('ADMIN') on /simulator/* - VaultChain src/routes/simulator.ts).
     const res = await clientPlane.get('/simulator/state', { apiKey: API_KEYS.client01 });
     expect(res.status).toBe(403);
     expect(res.contentType).toContain('application/problem+json');

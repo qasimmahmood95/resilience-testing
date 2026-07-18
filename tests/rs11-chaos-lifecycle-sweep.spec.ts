@@ -1,21 +1,21 @@
 /**
- * RS-11 — deterministic chaos sweep across a full withdrawal lifecycle
+ * RS-11 - deterministic chaos sweep across a full withdrawal lifecycle
  *
  * Failure injected:   a FIXED rotation of non-destructive toxics (latency,
  *                     bandwidth), one per lifecycle step, on the plane that
- *                     step uses. Deterministic by construction — no random
+ *                     step uses. Deterministic by construction - no random
  *                     schedule, no destructive cuts (ambiguous-outcome cases
  *                     are RS-02/03/04's job).
  * Expected behaviour: every step completes correctly, just slowly; latency-
  *                     toxified steps provably pay the injected latency.
  * Invariant:          the lifecycle is degradation-transparent end to end:
- *                     create → dual approval → Travel Rule gate → attach →
- *                     screening → broadcast → confirmation, with (a) balance
- *                     conservation `final = deposit − amount − fee` (the
- *                     external proxy for the unreadable ledger — F-07),
+ *                     create -> dual approval -> Travel Rule gate -> attach ->
+ *                     screening -> broadcast -> confirmation, with (a) balance
+ *                     conservation `final = deposit - amount - fee` (the
+ *                     external proxy for the unreadable ledger - F-07),
  *                     (b) every state transition audited exactly once,
  *                     (c) exactly one transaction.
- * Falsification:      FALSIFY=RS-11 skips all toxics — every latency-floor
+ * Falsification:      FALSIFY=RS-11 skips all toxics - every latency-floor
  *                     assertion fires (the sweep cannot tell a degraded run
  *                     from a healthy one, so it must fail when undegraded).
  */
@@ -28,7 +28,7 @@ import { expect, test } from './fixtures/index.js';
 /** Per-step latency toxic; floors assert elapsed >= this. */
 const STEP_LATENCY_MS = 800;
 const DEGRADED_BUDGET_MS = STEP_LATENCY_MS + BUDGET_FAST_MS;
-/** Cross-VASP + 1500.00 ≥ 1000.00 → Travel Rule required; fee 10 bps = 1.50. */
+/** Cross-VASP + 1500.00 >= 1000.00 -> Travel Rule required; fee 10 bps = 1.50. */
 const AMOUNT = '1500.00';
 const DEPOSIT = '100000.00';
 const FINAL_BALANCE = '98498.50';
@@ -67,7 +67,7 @@ test.describe('RS-11 chaos lifecycle sweep', () => {
       const result = await run();
       const elapsed = performance.now() - t0;
       // The degradation floor: under chaos this step must have paid the
-      // toll. This is the falsification hook — with toxics skipped it fires.
+      // toll. This is the falsification hook - with toxics skipped it fires.
       expect(elapsed, `degraded step on ${plane} paid >= ${STEP_LATENCY_MS}ms`).toBeGreaterThanOrEqual(
         STEP_LATENCY_MS,
       );
@@ -75,7 +75,7 @@ test.describe('RS-11 chaos lifecycle sweep', () => {
       return result;
     }
 
-    // Step 1 — create (client plane, cross-VASP so the Travel Rule gate arms).
+    // Step 1 - create (client plane, cross-VASP so the Travel Rule gate arms).
     const created = await degradedStep('client-plane', () =>
       clientPlane.post<Withdrawal>('/withdrawals', {
         body: {
@@ -93,7 +93,7 @@ test.describe('RS-11 chaos lifecycle sweep', () => {
     const txId = created.body?.id;
     if (txId === undefined) throw new Error('creation returned no id');
 
-    // Steps 2+3 — dual approval (ops plane), each under its own toxic.
+    // Steps 2+3 - dual approval (ops plane), each under its own toxic.
     for (const [operator, expected] of [
       [API_KEYS.operatorA, 'PENDING_APPROVAL'],
       [API_KEYS.operatorB, 'TRAVEL_RULE_CHECK'],
@@ -109,7 +109,7 @@ test.describe('RS-11 chaos lifecycle sweep', () => {
       expect(approval.body?.state).toBe(expected);
     }
 
-    // Step 4 — Travel Rule attach (ops plane: the route is operator/
+    // Step 4 - Travel Rule attach (ops plane: the route is operator/
     // compliance-only): opens the gate; the server then screens (CLEAN) and
     // broadcasts in the same progression.
     const attached = await degradedStep('ops-plane', () =>
@@ -128,9 +128,9 @@ test.describe('RS-11 chaos lifecycle sweep', () => {
     expect(attached.status).toBe(201);
     expect((attached.body as Withdrawal).state).toBe('PENDING_CONFIRMATION');
 
-    // Step 5 — confirmations via the control plane while the client plane is
+    // Step 5 - confirmations via the control plane while the client plane is
     // still degraded: observation and simulator control must be PROVABLY
-    // unaffected — the advance completes under the fast-path ceiling with the
+    // unaffected - the advance completes under the fast-path ceiling with the
     // toxic live (warm-up first, per FAST_PATH_CEILING_MS's contract).
     const settleToxic = chaos
       ? await toxics.apply({
@@ -156,11 +156,11 @@ test.describe('RS-11 chaos lifecycle sweep', () => {
     const final = await control.get<Withdrawal>(`/withdrawals/${txId}`);
     expect(final.body?.state).toBe('CONFIRMED');
 
-    // (a) Balance conservation — the external ledger proxy (F-07).
+    // (a) Balance conservation - the external ledger proxy (F-07).
     const wallet = await control.get<{ balance: string }>(`/wallets/${fx.walletId}`);
     expect(wallet.body?.balance).toBe(FINAL_BALANCE);
 
-    // (b) Every lifecycle transition audited EXACTLY once — degraded steps
+    // (b) Every lifecycle transition audited EXACTLY once - degraded steps
     // never double-fired a transition.
     const audit = await control.get<AuditPage>(
       `/audit?entityType=Transaction&entityId=${txId}&limit=100`,

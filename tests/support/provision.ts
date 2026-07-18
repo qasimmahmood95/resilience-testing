@@ -1,4 +1,4 @@
-// Per-test state provisioning through the PUBLIC API only — exactly what an
+// Per-test state provisioning through the PUBLIC API only - exactly what an
 // external integrator could do. All calls go via the control plane so toxics
 // can never corrupt setup. Each test gets a fresh account, so scenarios are
 // isolated from the seed dataset and from each other.
@@ -31,10 +31,10 @@ interface Account {
 
 /**
  * Create a funded, withdrawal-ready GBPX fixture for CLIENT #1:
- * account → simulated deposit → chain advance (credits it) → allowlisted
- * destination → sim-clock advance past cooling-off.
+ * account -> simulated deposit -> chain advance (credits it) -> allowlisted
+ * destination -> sim-clock advance past cooling-off.
  *
- * NOTE: sim clock and chain height are GLOBAL — this is only safe because the
+ * NOTE: sim clock and chain height are GLOBAL - this is only safe because the
  * suite is serialized (workers: 1).
  */
 export async function provisionFundedClient(
@@ -88,7 +88,7 @@ export async function provisionFundedClient(
   return { runId, clientId, accountId: account.body.id, walletId: wallet.id, destAddress };
 }
 
-/** Serialized withdrawal shape (subset we assert on) — VaultChain serializeTx. */
+/** Serialized withdrawal shape (subset we assert on) - VaultChain serializeTx. */
 export interface Withdrawal {
   id: string;
   walletId: string;
@@ -110,7 +110,7 @@ export async function countByIdempotencyKey(
     throw new Error(`countByIdempotencyKey: list failed (${page.status})`);
   }
   if (page.body.nextCursor !== null) {
-    throw new Error('countByIdempotencyKey: unexpected pagination — fixture wallet has >100 withdrawals');
+    throw new Error('countByIdempotencyKey: unexpected pagination - fixture wallet has >100 withdrawals');
   }
   return page.body.items.filter((w) => w.idempotencyKey === key).length;
 }

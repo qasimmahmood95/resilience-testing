@@ -1,14 +1,14 @@
 # Findings
 
 Gaps and sharp edges observed in VaultChain **as an external consumer**. Per
-this repo's hard limits, nothing here is fixed in this repo — each entry
+this repo's hard limits, nothing here is fixed in this repo - each entry
 records evidence and what an upstream fix would look like. "Confirmed" means
 reproduced with captured evidence; "suspected" means observed once or inferred
 from source, pending a dedicated reproduction.
 
 ---
 
-## F-01 — No injectable internal network boundary (topology limitation, by design)
+## F-01 - No injectable internal network boundary (topology limitation, by design)
 
 - **Status:** confirmed (by inspection of the pinned commit).
 - **What:** VaultChain is a single Fastify process with embedded SQLite and no
@@ -17,13 +17,13 @@ from source, pending a dedicated reproduction.
   mid-workflow" cannot be induced by network fault injection at any boundary
   an external consumer can reach.
 - **Impact:** dependency-level failure modes are untestable from outside; the
-  equivalent invariants are asserted at the client↔API edge instead
-  (RS-05/06/09 reframing — see `failure-scenarios.md`).
-- **Upstream shape of a fix:** none required — this is a legitimate design for
+  equivalent invariants are asserted at the client-API edge instead
+  (RS-05/06/09 reframing - see `failure-scenarios.md`).
+- **Upstream shape of a fix:** none required - this is a legitimate design for
   a self-contained SUT. A multi-service topology (screening as a sidecar
   process, DB over TCP) would make dependency-level injection possible.
 
-## F-02 — Shipped compose healthcheck never turns healthy on Alpine
+## F-02 - Shipped compose healthcheck never turns healthy on Alpine
 
 - **Status:** confirmed.
 - **What:** VaultChain's `docker-compose.yml` healthcheck probes
@@ -31,9 +31,9 @@ from source, pending a dedicated reproduction.
   `localhost` can resolve to `::1` first; Fastify binds IPv4 `0.0.0.0` only,
   and busybox `wget` does not fall back to the next address. The probe fails
   forever while the server is provably listening.
-- **Evidence:** CI run `29644907610` — server logged
+- **Evidence:** CI run `29644907610` - server logged
   `listening at http://172.18.0.2:3000`, followed by 24 consecutive probe
-  failures and `container … is unhealthy`; switching only the probe host to
+  failures and `container ... is unhealthy`; switching only the probe host to
   `127.0.0.1` (this repo's overlay, commit `9e9b358`) resolves it.
 - **Impact:** any consumer that health-gates startup (`docker compose up
   --wait`, Kubernetes-style readiness) sees VaultChain as permanently
@@ -42,11 +42,11 @@ from source, pending a dedicated reproduction.
 - **Upstream shape of a fix:** probe `127.0.0.1` explicitly (one-word change),
   or bind Fastify to `::` as well.
 
-## F-03 — No server-side request timeout (slow-loris tolerance)
+## F-03 - No server-side request timeout (slow-loris tolerance)
 
 - **Status:** confirmed (source + RS-08 empirical floor).
 - **Evidence:** RS-08 (`tests/rs08-slow-request-body.spec.ts`) trickles a
-  ~6 KB body at 1 KB/s; the suite's CI runs hold its ≥4.39 s transfer floor
+  ~6 KB body at 1 KB/s; the suite's CI runs hold its >=4.39 s transfer floor
   with a typed 400 after full receipt, and in local measurement the 400
   arrives after ~6 s with the server holding the connection throughout.
   Source: `buildApp()` passes no timeout options and Fastify's defaults
@@ -60,12 +60,12 @@ from source, pending a dedicated reproduction.
 - **Impact:** a single misbehaving or malicious client can hold server
   connections open indefinitely. In-process SQLite means no connection-pool
   starvation of a shared DB, and RS-08 shows other traffic planes stay
-  responsive — so the degradation is bounded in blast radius, but unbounded in
+  responsive - so the degradation is bounded in blast radius, but unbounded in
   duration.
 - **Upstream shape of a fix:** set `requestTimeout` (e.g. 30 s) in the Fastify
   factory options; one line, no behavioural change for well-behaved clients.
 
-## F-04 — Unknown request fields are silently stripped, not rejected
+## F-04 - Unknown request fields are silently stripped, not rejected
 
 - **Status:** confirmed.
 - **What:** request schemas declare `additionalProperties: false`, but
@@ -75,7 +75,7 @@ from source, pending a dedicated reproduction.
   not 400.
 - **Evidence (captured 2026-07-18, pinned commit):** `POST /withdrawals` with
   the misspelled field `"idempotency_key": "f04-key-12345678"` (valid
-  otherwise) →
+  otherwise) ->
 
   ```text
   status:201
@@ -83,38 +83,38 @@ from source, pending a dedicated reproduction.
   ```
 
   The withdrawal was created, the misspelled key silently discarded, and the
-  stored `idempotencyKey` is `null` — a retry of this request would
+  stored `idempotencyKey` is `null` - a retry of this request would
   double-create.
 - **Impact:** an integrator who misspells an optional field gets silent
-  acceptance — worst case `idempotencyKey` (e.g. `idempotency_key`), where the
+  acceptance - worst case `idempotencyKey` (e.g. `idempotency_key`), where the
   request succeeds but is **not idempotent**, so a retry double-creates. This
-  quietly undermines the platform's own headline idempotency guarantee.
+  quietly undermines the platform's own idempotency guarantee.
 - **Upstream shape of a fix:** configure AJV with `removeAdditional: false`
   so closed request schemas reject with a 400 problem, matching the
   strict-both-directions contract the README claims for the response side.
 
-## F-05 — No account-enumeration endpoint
+## F-05 - No account-enumeration endpoint
 
 - **Status:** confirmed.
-- **What:** there is no `GET /accounts` (list) route — only `POST /accounts`
+- **What:** there is no `GET /accounts` (list) route - only `POST /accounts`
   and `GET /accounts/{id}`. A client (or operator) cannot discover account
   ids through the API; they must be captured out-of-band at creation time.
 - **Evidence (captured 2026-07-18, admin key):**
 
   ```text
-  GET /accounts → status:404
+  GET /accounts -> status:404
   {"message":"Route GET:/accounts not found","error":"Not Found","statusCode":404}
   ```
 
   (Note the shape: Fastify's default 404, not the platform's own
-  `problem+json` envelope — a second, smaller contract inconsistency.)
+  `problem+json` envelope - a second, smaller contract inconsistency.)
 - **Impact:** an external integrator recovering from state loss cannot
   re-enumerate their own accounts; this suite provisions fresh accounts per
   test and records ids from creation responses to work around it.
 - **Upstream shape of a fix:** tenant-scoped `GET /accounts` mirroring the
   existing `GET /clients` pattern (CLIENT sees own, staff see all).
 
-## F-06 — `idempotencyKey` is optional (keyless retries double-create by design)
+## F-06 - `idempotencyKey` is optional (keyless retries double-create by design)
 
 - **Status:** confirmed by inspection (`src/routes/withdrawals.ts` schema:
   key absent from `required`); executable reproduction lands with RS-03 (M3).
@@ -126,33 +126,33 @@ from source, pending a dedicated reproduction.
 - **Upstream shape of a fix:** require the key on `POST /withdrawals` (breaking
   change), or at minimum document the retry contract prominently in the spec.
 
-## F-07 — Ledger sub-ledger is not externally readable
+## F-07 - Ledger sub-ledger is not externally readable
 
 - **Status:** confirmed (no route in `src/routes/` touches ledger entries).
-- **What:** the platform's headline invariant — `Σ(ledger entries for a
-  wallet) == wallet.balance`, per asset, always — cannot be verified by an
+- **What:** the platform's core invariant, `Σ(ledger entries for a
+  wallet) == wallet.balance` per asset at all times, cannot be verified by an
   external consumer: there is no API that returns ledger entries. VaultChain's
   own suite asserts it via direct DB access, which an integrator (and this
   repo, by its hard limits) does not have.
 - **Impact:** external reconciliation/audit tooling cannot exist against this
   API. This suite asserts **balance conservation** instead (RS-11 pins the
-  single-withdrawal case exactly: `final = deposit − amount − fee`) — a
+  single-withdrawal case exactly: `final = deposit - amount - fee`) - a
   strictly weaker external proxy than ledger reconciliation.
 - **Upstream shape of a fix:** a read-only, tenant-scoped
   `GET /wallets/{id}/ledger` (paged like `/audit`), turning the invariant
   into an externally checkable contract.
 
-## F-08 — Hold release→broadcast is not atomic
+## F-08 - Hold release->broadcast is not atomic
 
 - **Status:** confirmed by inspection (`src/services/lifecycle.ts`,
   `releaseHold`); surfaced by the RS-06 review. Executable evidence would
   need a dedicated scenario (candidate for a future RS).
 - **What:** releasing a hold runs as TWO separate DB transactions:
-  `resolveHoldCore` commits `hold → RELEASED` (with its audit row), and only
+  `resolveHoldCore` commits `hold -> RELEASED` (with its audit row), and only
   then does `broadcastWithdrawal` attempt the debit + `BROADCAST` transition
-  in its own transaction. If the second step fails — reachable at the edge by
+  in its own transaction. If the second step fails - reachable at the edge by
   draining the wallet with another withdrawal between `HELD` and the release,
-  making the debit throw `insufficient-funds` — the hold is RELEASED while
+  making the debit throw `insufficient-funds` - the hold is RELEASED while
   the transaction is stuck `HELD`: a half-completed resolution the officer
   sees as a 422.
 - **Impact:** the officer's mental model ("release = the withdrawal

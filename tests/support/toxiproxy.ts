@@ -1,5 +1,5 @@
 // Minimal typed client for the Toxiproxy HTTP API (v2).
-// https://github.com/Shopify/toxiproxy#http-api — kept dependency-free so the
+// https://github.com/Shopify/toxiproxy#http-api - kept dependency-free so the
 // suite controls exactly what goes over the wire.
 
 import { BUDGET_FAST_MS, TOXIPROXY_URL, type ProxyName } from './config.js';

@@ -5,7 +5,7 @@ Failure-mode (resilience) test suite for **VaultChain**
 fictional digital-asset custody platform. This repo treats VaultChain strictly
 as an external system-under-test: we inject network faults with **Toxiproxy**
 between the test client and VaultChain's API edge, and assert *behaviour under
-failure* — fail-closed compliance gates, typed errors instead of hangs,
+failure* - fail-closed compliance gates, typed errors instead of hangs,
 idempotent retries, no double-settlement.
 
 ## Hard limits (non-negotiable)
@@ -15,7 +15,7 @@ idempotent retries, no double-settlement.
    or monkey-patch VaultChain. We consume it exactly as an external integrator
    could: `docker compose` with a remote git build context pinned to a commit.
 2. **If VaultChain lacks an invariant worth asserting, it goes in
-   `docs/FINDINGS.md`** — never fixed here. A finding with evidence is a
+   `docs/FINDINGS.md`**: never fixed here. A finding with evidence is a
    deliverable; a patch is a scope violation.
 3. **No vacuous passes.** Every resilience test must have a documented
    *falsification lever* (see below) and must be shown to fail when its
@@ -31,14 +31,14 @@ Read this before proposing any new fault-injection point:
   separate DB, no screening vendor, no chain node, no outbound webhooks.
   "Downstream dependencies" (chain confirmations, screening, clock) are
   in-process simulations driven via the `/simulator/*` control plane.
-- Therefore the **only interposable network boundary is client ↔ API edge**.
+- Therefore the **only interposable network boundary is client-API edge**.
   We model distinct *traffic planes* as separate Toxiproxy proxies to the same
   upstream, so faults can be applied asymmetrically:
-  - `client-plane` — traffic authenticated as CLIENT actors (the degraded path
+  - `client-plane` - traffic authenticated as CLIENT actors (the degraded path
     under test),
-  - `ops-plane` — OPERATOR / COMPLIANCE_OFFICER traffic (can be kept healthy
+  - `ops-plane` - OPERATOR / COMPLIANCE_OFFICER traffic (can be kept healthy
     or degraded independently),
-  - `control-plane` — **never toxified**. All `/simulator/*` calls and all
+  - `control-plane` - **never toxified**. All `/simulator/*` calls and all
     ground-truth assertions (state reads after a fault) go through this port so
     toxics can never corrupt *observation*.
 - Faults that require an internal network hop (e.g. "screening service times
@@ -52,17 +52,17 @@ Useful VaultChain facts (verified against source at the pinned commit):
 - `POST /withdrawals` accepts an optional `idempotencyKey` (minLength 8);
   replays are tenant-scoped and return the original transaction.
 - Withdrawal states (verified against source; the Travel-Rule gate precedes
-  screening): `PENDING_APPROVAL → APPROVED → [TRAVEL_RULE_CHECK →] SCREENING
-  → (HELD on FLAG) → BROADCAST → PENDING_CONFIRMATION → CONFIRMED`, plus
+  screening): `PENDING_APPROVAL -> APPROVED -> [TRAVEL_RULE_CHECK ->] SCREENING
+  -> (HELD on FLAG) -> BROADCAST -> PENDING_CONFIRMATION -> CONFIRMED`, plus
   `CANCELLED` / `REJECTED` / `FAILED`. There is no `TRAVEL_RULE_ATTACHED`
-  *state* — the attach writes a `TRAVEL_RULE_ATTACHED` *audit action* and the
+  *state* - the attach writes a `TRAVEL_RULE_ATTACHED` *audit action* and the
   tx proceeds directly to SCREENING. Transitions are atomic with their audit
-  row; settlement uses a compare-and-set claim. Hold release→broadcast is NOT
-  atomic (two separate transactions — finding F-08).
+  row; settlement uses a compare-and-set claim. Hold release->broadcast is NOT
+  atomic (two separate transactions - finding F-08).
 - Ledger invariant: `Σ(ledger entries for a wallet) == wallet.balance` for
   every asset, always.
 - `/simulator/tx/{id}/force` forces a broadcast-stage transaction's **outcome**
-  (`CONFIRMED` | `FAILED`, with refund on FAILED) — it can NOT push arbitrary
+  (`CONFIRMED` | `FAILED`, with refund on FAILED) - it can NOT push arbitrary
   states (corrected 2026-07-18; earlier drafts overclaimed). Falsification
   levers therefore use per-scenario sabotage modes (`FALSIFY=<id>`, typically
   skipping the fault so degraded-behaviour assertions must fire) plus forced
@@ -73,12 +73,12 @@ Useful VaultChain facts (verified against source at the pinned commit):
 - **TypeScript strict** (`"strict": true`, no `any`, no non-null assertions
   without a comment stating why it is safe).
 - **Playwright test runner** for all tests. Resilience tests run serialized
-  (`workers: 1`) — toxics are global state on shared proxies, and VaultChain's
+  (`workers: 1`) - toxics are global state on shared proxies, and VaultChain's
   sim-clock is global.
 - **Determinism policy.** Resilience testing is about time, so the rules are
   explicit rather than absolute:
   - Client-side deadlines use explicit budgets (`AbortSignal.timeout`) with
-    named constants — never bare `waitForTimeout` sleeps as synchronization.
+    named constants - never bare `waitForTimeout` sleeps as synchronization.
   - Toxic parameters (latency, rate, timeout) are named constants with the
     derivation of each budget commented.
   - Any randomness is seeded and the seed is printed on failure.
@@ -93,7 +93,7 @@ Useful VaultChain facts (verified against source at the pinned commit):
   minimum: ADR-0001 "Toxiproxy over chaos-mesh/pumba at this scale",
   ADR-0002 "single-edge topology and traffic-plane proxies".
 
-## Commands (once scaffolded — M1)
+## Commands (once scaffolded - M1)
 
 ```bash
 npm run stack:up                # toxiproxy + vaultchain (remote git build context)
@@ -129,6 +129,6 @@ merge yourself"); it is recorded here for continuity, remains subject to the
 owner revoking it at any time, and every merge stays visible on the PR for
 owner review after the fact. Conditions for any self-merge: (1) both subagent
 gates have passed, (2) CI is green on the head commit, (3) there are no
-unresolved review comments. Use a merge commit (never squash — the
+unresolved review comments. Use a merge commit (never squash - the
 conventional-commit history is part of the portfolio). After merging, restart
 the working branch from the new `main`.

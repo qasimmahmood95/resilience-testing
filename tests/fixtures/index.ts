@@ -1,9 +1,9 @@
 // Shared fixtures. Two hygiene guarantees live here (CLAUDE.md determinism
 // policy):
-//  1. LEAK DETECTION — every test (auto fixture, not opt-in) fails loudly at
+//  1. LEAK DETECTION - every test (auto fixture, not opt-in) fails loudly at
 //     setup if it inherits toxics from a previous test, instead of silently
 //     running degraded.
-//  2. GUARANTEED TEARDOWN — every toxic is removed after each test, pass or
+//  2. GUARANTEED TEARDOWN - every toxic is removed after each test, pass or
 //     fail. A control-plane toxic is checked BEFORE the sweep and is always a
 //     hard failure: it means observation itself was compromised (ADR-0002).
 
@@ -33,7 +33,7 @@ interface Fixtures {
   _toxicHygiene: void;
   /** Toxic applicator (opt-in) with per-test teardown of what it applied. */
   toxics: ToxicHandle;
-  /** Canonical sim state: POST /simulator/reset (chain/clock/fault state — not the DB). */
+  /** Canonical sim state: POST /simulator/reset (chain/clock/fault state - not the DB). */
   cleanSimState: void;
   /** CLIENT-actor client on the (degradable) client plane. */
   clientPlane: VaultChainClient;
@@ -49,7 +49,7 @@ const fmt = (ts: { proxy: string; toxic: string }[]): string =>
 export const test = base.extend<Fixtures>({
   _toxicHygiene: [
     async ({}, use, testInfo) => {
-      // Setup: a clean slate is an invariant, not a hope — for every test,
+      // Setup: a clean slate is an invariant, not a hope - for every test,
       // including ones that never touch toxics themselves.
       const inherited = await listAllToxics();
       if (inherited.length > 0) {
@@ -111,7 +111,7 @@ export const test = base.extend<Fixtures>({
       try {
         await removeToxic(t.proxy, t.name);
       } catch {
-        // Already gone — the hygiene sweep will catch anything left.
+        // Already gone - the hygiene sweep will catch anything left.
       }
     }
   },

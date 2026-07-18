@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   // Toxics are global state on shared proxies and VaultChain's sim-clock is
-  // global — resilience tests must never run concurrently (CLAUDE.md).
+  // global - resilience tests must never run concurrently (CLAUDE.md).
   workers: 1,
   fullyParallel: false,
   // A resilience invariant that only passes on retry is not passing.

@@ -1,16 +1,16 @@
 /**
- * RS-03 — response torn after the server committed (the ambiguous outcome)
+ * RS-03 - response torn after the server committed (the ambiguous outcome)
  *
  * Failure injected:   limit_data toxic (CUT_AFTER_BYTES), downstream,
  *                     client-plane: the request reaches VaultChain intact and
  *                     COMMITS; the response dies after a few bytes.
  * Expected behaviour: the client sees a transport error and cannot know the
  *                     outcome; ground truth shows the withdrawal exists.
- * Invariant:          **no double-settlement** — replaying with the SAME
+ * Invariant:          **no double-settlement**: replaying with the SAME
  *                     idempotency key returns the ORIGINAL transaction
  *                     (200, same id); exactly one transaction exists at every
  *                     point.
- * Falsification:      FALSIFY=RS-03 retries with a DIFFERENT key — the
+ * Falsification:      FALSIFY=RS-03 retries with a DIFFERENT key - the
  *                     exactly-one assertion fires, demonstrating the
  *                     double-create this scenario exists to prevent
  *                     (see also finding F-06: the key is optional).
@@ -42,7 +42,7 @@ test.describe('RS-03 torn response + idempotent replay', () => {
       idempotencyKey,
     };
 
-    // The toxic is ALWAYS applied in this scenario — sabotage attacks the
+    // The toxic is ALWAYS applied in this scenario - sabotage attacks the
     // recovery protocol (wrong key), not the fault.
     const toxic = await toxics.apply({
       proxy: 'client-plane',
@@ -56,7 +56,7 @@ test.describe('RS-03 torn response + idempotent replay', () => {
     expect(await diedAtTransport(() => clientPlane.post('/withdrawals', { body }))).toBe(true);
 
     // Ground truth: the server COMMITTED despite the client-side error.
-    // This is what makes the outcome ambiguous — and dangerous.
+    // This is what makes the outcome ambiguous - and dangerous.
     expect(await countByIdempotencyKey(control, fx.walletId, idempotencyKey)).toBe(1);
     const truth = await control.get<{ items: Withdrawal[] }>(
       `/withdrawals?walletId=${fx.walletId}&limit=100`,
@@ -73,7 +73,7 @@ test.describe('RS-03 torn response + idempotent replay', () => {
       clientPlane.post<Withdrawal>('/withdrawals', { body: { ...body, idempotencyKey: replayKey } }),
     );
 
-    // Exactly one transaction for this wallet — the invariant this scenario
+    // Exactly one transaction for this wallet - the invariant this scenario
     // exists for. (Under sabotage the second create makes this 2.)
     const wallet = await control.get<{ items: Withdrawal[] }>(
       `/withdrawals?walletId=${fx.walletId}&limit=100`,

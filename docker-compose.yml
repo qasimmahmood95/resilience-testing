@@ -1,13 +1,13 @@
 # Resilience-testing overlay: VaultChain (system-under-test) behind Toxiproxy.
 #
 # External-consumer stance (CLAUDE.md hard limit 1): vaultchain is built from a
-# REMOTE git build context pinned to a commit — nothing is vendored or patched.
+# REMOTE git build context pinned to a commit - nothing is vendored or patched.
 # The app port is NOT published; every network path to VaultChain goes through
 # a Toxiproxy proxy ("traffic plane", ADR-0002):
 #
-#   client-plane   :18000  CLIENT-actor traffic — the degraded path under test
+#   client-plane   :18000  CLIENT-actor traffic - the degraded path under test
 #   ops-plane      :18001  OPERATOR / COMPLIANCE_OFFICER traffic
-#   control-plane  :18002  /simulator/* + ground-truth reads — NEVER toxified
+#   control-plane  :18002  /simulator/* + ground-truth reads - NEVER toxified
 #   toxiproxy API  :8474   toxic management from the test runner
 services:
   vaultchain:
@@ -16,11 +16,11 @@ services:
       context: 'https://github.com/qasimmahmood95/vaultchain.git#9838ba95422fd68a9b7bc44adf631d0ce8f6ee91'
     environment:
       VAULTCHAIN_ENV: dev
-    # No `ports:` on purpose — access only via toxiproxy planes.
+    # No `ports:` on purpose - access only via toxiproxy planes.
     healthcheck:
       # 127.0.0.1, not localhost: musl/Alpine can resolve localhost to ::1
       # first, Fastify binds IPv4 0.0.0.0 only, and busybox wget does not fall
-      # back to the next address — so a `localhost` probe never turns healthy
+      # back to the next address - so a `localhost` probe never turns healthy
       # (observed: CI run 29644907610, server up, 24 straight probe failures).
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
       interval: 5s
