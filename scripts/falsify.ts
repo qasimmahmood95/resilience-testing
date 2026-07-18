@@ -20,8 +20,12 @@ import { spawnSync } from 'node:child_process';
 const SCENARIOS: readonly { id: string; grep: string }[] = [
   { id: 'RS-01', grep: 'RS-01' },
   { id: 'RS-02', grep: 'RS-02' },
+  { id: 'RS-03', grep: 'RS-03' },
+  { id: 'RS-04', grep: 'RS-04' },
   { id: 'RS-07', grep: 'RS-07' },
   { id: 'RS-08', grep: 'RS-08' },
+  { id: 'RS-10', grep: 'RS-10' },
+  { id: 'RS-11', grep: 'RS-11' },
   { id: 'RS-12', grep: 'RS-12' },
 ];
 
