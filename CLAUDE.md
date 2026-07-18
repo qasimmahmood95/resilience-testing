@@ -57,9 +57,12 @@ Useful VaultChain facts (verified against source at the pinned commit):
   atomic with their audit row; settlement uses a compare-and-set claim.
 - Ledger invariant: `Σ(ledger entries for a wallet) == wallet.balance` for
   every asset, always.
-- `/simulator/tx/{id}/force` can push a transaction into an arbitrary state —
-  this is our legitimate, no-patch lever for *deliberately breaking
-  invariants* during falsification runs.
+- `/simulator/tx/{id}/force` forces a broadcast-stage transaction's **outcome**
+  (`CONFIRMED` | `FAILED`, with refund on FAILED) — it can NOT push arbitrary
+  states (corrected 2026-07-18; earlier drafts overclaimed). Falsification
+  levers therefore use per-scenario sabotage modes (`FALSIFY=<id>`, typically
+  skipping the fault so degraded-behaviour assertions must fire) plus forced
+  outcomes where legal.
 
 ## Conventions
 
@@ -112,3 +115,16 @@ npm run stack:down              # clean slate (SQLite state dies with container)
 GitHub Actions: bring up the full stack headlessly (compose with `--wait`,
 health-gated), run the resilience suite, then the falsification harness as a
 separate required job. Publish the Playwright HTML report as an artifact.
+
+## Merge protocol
+
+Milestone PRs are checked and merged by the working agent itself. This
+authorization was given by the repo owner (qasimmahmood95) as an explicit
+instruction in the working session of 2026-07-18 ("From now on, check and
+merge yourself"); it is recorded here for continuity, remains subject to the
+owner revoking it at any time, and every merge stays visible on the PR for
+owner review after the fact. Conditions for any self-merge: (1) both subagent
+gates have passed, (2) CI is green on the head commit, (3) there are no
+unresolved review comments. Use a merge commit (never squash — the
+conventional-commit history is part of the portfolio). After merging, restart
+the working branch from the new `main`.
