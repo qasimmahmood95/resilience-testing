@@ -51,10 +51,14 @@ Useful VaultChain facts (verified against source at the pinned commit):
 - Errors are RFC 9457 `application/problem+json` (`src/errors.ts`).
 - `POST /withdrawals` accepts an optional `idempotencyKey` (minLength 8);
   replays are tenant-scoped and return the original transaction.
-- Withdrawal states: `PENDING_APPROVAL → APPROVED → SCREENING →
-  (SCREENING_FLAG/HELD) → TRAVEL_RULE_CHECK → TRAVEL_RULE_ATTACHED → BROADCAST
-  → PENDING_CONFIRMATION → …`, plus `CANCELLED` / `REJECTED`. Transitions are
-  atomic with their audit row; settlement uses a compare-and-set claim.
+- Withdrawal states (verified against source; the Travel-Rule gate precedes
+  screening): `PENDING_APPROVAL → APPROVED → [TRAVEL_RULE_CHECK →] SCREENING
+  → (HELD on FLAG) → BROADCAST → PENDING_CONFIRMATION → CONFIRMED`, plus
+  `CANCELLED` / `REJECTED` / `FAILED`. There is no `TRAVEL_RULE_ATTACHED`
+  *state* — the attach writes a `TRAVEL_RULE_ATTACHED` *audit action* and the
+  tx proceeds directly to SCREENING. Transitions are atomic with their audit
+  row; settlement uses a compare-and-set claim. Hold release→broadcast is NOT
+  atomic (two separate transactions — finding F-08).
 - Ledger invariant: `Σ(ledger entries for a wallet) == wallet.balance` for
   every asset, always.
 - `/simulator/tx/{id}/force` forces a broadcast-stage transaction's **outcome**

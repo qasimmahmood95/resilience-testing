@@ -24,6 +24,8 @@ export interface ToxicHandle {
   apply(input: AddToxicInput): Promise<Toxic>;
   /** Remove one toxic early (e.g. to model recovery mid-test). */
   remove(proxy: AddToxicInput['proxy'], name: string): Promise<void>;
+  /** Remove every toxic THIS test applied (mid-test recovery; no-op if none). */
+  removeAllApplied(): Promise<void>;
 }
 
 interface Fixtures {
@@ -89,6 +91,16 @@ export const test = base.extend<Fixtures>({
         await removeToxic(proxy, name);
         const i = applied.findIndex((t) => t.proxy === proxy && t.name === name);
         if (i >= 0) applied.splice(i, 1);
+      },
+      async removeAllApplied() {
+        // Remove-then-untrack: if removeToxic throws, the entry stays tracked
+        // so the fixture teardown retries it (layered teardown stays intact).
+        while (applied.length > 0) {
+          const t = applied[0];
+          if (t === undefined) break;
+          await removeToxic(t.proxy, t.name);
+          applied.shift();
+        }
       },
     };
 
