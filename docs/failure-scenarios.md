@@ -9,7 +9,7 @@ the ambiguous-outcome case that idempotency exists for).
 
 | ID | Failure injected (toxic · plane · direction) | Workflow under test | Expected degraded behaviour | Invariant that must hold | Falsification lever (proves the test can fail) |
 |---|---|---|---|---|---|
-| RS-01 | `latency` 2000ms ± 500ms jitter · client · down | Withdrawal creation, read-back | Request completes slowly within the client's 5s budget; response is schema-valid | Degradation is slow, not wrong: exactly one tx created, valid `problem+json` on any failure, no partial state visible | Drop client budget below toxic latency → budget-abort assertion must fire |
+| RS-01 | `latency` 2000ms, jitter 0 (determinism policy: unseedable jitter buys no coverage) · client · down | Withdrawal creation, read-back | Request completes slowly within the client's raised budget; response is schema-valid | Degradation is slow, not wrong: exactly one tx created, valid `problem+json` on any failure, no partial state visible | `FALSIFY=RS-01` skips the toxic → elapsed-floor assertion must fire |
 | RS-02 | `timeout` (black hole, 0 data) · client · up | `POST /withdrawals` with `idempotencyKey` | Client aborts at its deadline (typed client error, not a hang); server never saw the request | Retry after abort creates **exactly one** transaction (same id on replay); bounded wait — no unbounded hang | Retry with a *different* idempotency key → duplicate-detection assertion must fire |
 | RS-03 | `reset_peer` · client · down (cut after commit) | `POST /withdrawals` with `idempotencyKey` | Client sees connection reset; outcome is ambiguous client-side | **No double-settlement:** replay with same key returns the original tx; one debit; `Σ ledger == balance` | Replay with different key (double-create) → ledger/duplicate assertions must fire |
 | RS-04 | `reset_peer` · ops · down, on 2nd approval | Dual-approval (maker-checker) withdrawal | Approver's client sees reset; approval may or may not have landed | Retried approval never double-counts; exactly N **distinct** approvers, maker excluded; single `APPROVED` transition and audit row | Third approval by an already-counted approver via control plane → distinct-approver assertion must fire |
@@ -34,11 +34,9 @@ open the gate**. The topology limitation itself will be recorded in
 `docs/FINDINGS.md` with a note on what a multi-service VaultChain would need
 for true dependency-level injection.
 
-## Findings candidates (to verify empirically, not assume)
+## Findings
 
-1. **No server-side request timeout** (`src/app.ts` sets no
-   `requestTimeout`/`connectionTimeout`) — RS-08 will measure whether a
-   trickled request body holds a connection open unboundedly.
-2. **`idempotencyKey` is optional** on `POST /withdrawals` — retries without
-   it double-create *by design*; RS-03 documents this sharp edge for clients.
-3. **No injectable internal boundary** — see reframing note above.
+Confirmed findings now live in [`FINDINGS.md`](FINDINGS.md) (F-01…F-06),
+including two discovered while building M2: the shipped compose healthcheck
+never turns healthy on Alpine (F-02), and unknown request fields are silently
+stripped rather than rejected — which can silently void idempotency (F-04).
