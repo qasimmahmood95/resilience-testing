@@ -36,7 +36,10 @@ for true dependency-level injection.
 
 ## Findings
 
-Confirmed findings now live in [`FINDINGS.md`](FINDINGS.md) (F-01…F-06),
-including two discovered while building M2: the shipped compose healthcheck
-never turns healthy on Alpine (F-02), and unknown request fields are silently
-stripped rather than rejected — which can silently void idempotency (F-04).
+Confirmed findings now live in [`FINDINGS.md`](FINDINGS.md) (F-01…F-08).
+Several were discovered *by the act of building the suite*: the shipped
+compose healthcheck never turns healthy on Alpine (F-02, M1 CI), unknown
+request fields silently stripped — which can silently void idempotency
+(F-04, RS-08 development), the unreadable ledger sub-ledger (F-07, RS-11
+design), and the non-atomic hold release→broadcast orchestration (F-08,
+surfaced by the RS-06 code review).
