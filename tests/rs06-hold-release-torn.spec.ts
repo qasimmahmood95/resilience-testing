@@ -8,9 +8,13 @@
  * Expected behaviour: the officer cannot know the outcome; the retry is
  *                     answered by a typed 409 `hold-not-open` — never a
  *                     second release, never a second debit.
- * Invariant:          hold resolution is atomic and exactly-once under
- *                     ambiguity: hold is RELEASED (never in-between), exactly
- *                     one HOLD_RELEASED audit row, exactly one debit.
+ * Invariant:          hold resolution is EXACTLY-ONCE under ambiguity: hold
+ *                     is RELEASED, exactly one HOLD_RELEASED audit row,
+ *                     exactly one debit, and the retry is a typed conflict —
+ *                     never a second effect. (Deliberately NOT claimed:
+ *                     atomicity of the compound release→broadcast operation —
+ *                     VaultChain runs those as separate DB transactions; see
+ *                     finding F-08.)
  * Falsification:      FALSIFY=RS-06 skips the cut — the release-must-die-at-
  *                     transport assertion fires (it just succeeds).
  */
@@ -21,6 +25,11 @@ import { diedAtTransport, retryOnceOnTransportError } from './support/transport.
 import type { Problem } from './support/vaultchain.js';
 import { expect, test } from './fixtures/index.js';
 
+/**
+ * CUT_AFTER_BYTES: 64 is smaller than any complete HTTP status-line + headers
+ * block, so no complete response can ever cross the cut — the commit is
+ * DETERMINISTICALLY invisible to the officer, never "sometimes readable".
+ */
 const CUT_AFTER_BYTES = 64;
 /** Below the 1000.00 dual-approval threshold → a single approval suffices. */
 const AMOUNT = '500.00';
@@ -31,7 +40,7 @@ const BALANCE_SETTLED = '99499.50';
 interface Hold {
   id: string;
   state: string;
-  transaction?: { id: string };
+  transactionId: string;
 }
 
 test.describe('RS-06 hold release under ambiguity', () => {
@@ -40,7 +49,12 @@ test.describe('RS-06 hold release under ambiguity', () => {
     clientPlane,
     opsPlane,
     control,
+    cleanSimState,
   }) => {
+    // cleanSimState clears the GLOBAL one-shot screeningNext slot: a FLAG
+    // leaked by an earlier failed test would otherwise be consumed by our
+    // provisioning deposit and hold IT instead (cross-test poisoning).
+    void cleanSimState;
     const fx = await provisionFundedClient(control, { depositAmount: DEPOSIT });
 
     // Queue exactly one FLAG so screening opens a hold for OUR withdrawal.
@@ -69,7 +83,7 @@ test.describe('RS-06 hold release under ambiguity', () => {
 
     // Locate the OPEN hold for our transaction (ground truth, clean plane).
     const holds = await control.get<{ items: Hold[] }>('/holds?state=OPEN&limit=100');
-    const hold = holds.body?.items.find((h) => JSON.stringify(h).includes(txId));
+    const hold = holds.body?.items.find((h) => h.transactionId === txId);
     if (hold === undefined) throw new Error('no OPEN hold found for the flagged withdrawal');
 
     const releasedAuditCount = async (): Promise<number> => {

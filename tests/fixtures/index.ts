@@ -93,10 +93,13 @@ export const test = base.extend<Fixtures>({
         if (i >= 0) applied.splice(i, 1);
       },
       async removeAllApplied() {
+        // Remove-then-untrack: if removeToxic throws, the entry stays tracked
+        // so the fixture teardown retries it (layered teardown stays intact).
         while (applied.length > 0) {
-          // applied is non-empty inside the loop; shift() cannot return undefined.
-          const t = applied.shift() as { proxy: AddToxicInput['proxy']; name: string };
+          const t = applied[0];
+          if (t === undefined) break;
           await removeToxic(t.proxy, t.name);
+          applied.shift();
         }
       },
     };

@@ -20,6 +20,12 @@ import { provisionFundedClient, type Withdrawal } from './support/provision.js';
 import { diedAtTransport, retryOnceOnTransportError } from './support/transport.js';
 import { expect, test } from './fixtures/index.js';
 
+/**
+ * CUT_AFTER_BYTES: 64 is smaller than this request's line alone
+ * (`POST /withdrawals/<uuid>/travel-rule HTTP/1.1` ≈ 75 bytes), so no
+ * complete request can ever cross the cut — Fastify DETERMINISTICALLY never
+ * dispatches the handler; there is no "sometimes the body squeaks through".
+ */
 const CUT_AFTER_BYTES = 64;
 const AMOUNT = '1500.00';
 const DEPOSIT = '100000.00';
@@ -46,7 +52,11 @@ test.describe('RS-05 Travel-Rule gate fail-closed', () => {
     clientPlane,
     opsPlane,
     control,
+    cleanSimState,
   }) => {
+    // Clears the global one-shot screeningNext slot: a FLAG leaked by an
+    // earlier failed test would divert our recovery path into HELD.
+    void cleanSimState;
     const fx = await provisionFundedClient(control, { depositAmount: DEPOSIT });
 
     // Arm the gate: cross-VASP + >= 1000.00 fiat, dual-approved.
@@ -78,7 +88,10 @@ test.describe('RS-05 Travel-Rule gate fail-closed', () => {
       return (audit.body?.items ?? [])
         .map((e) => e.action)
         .filter((a) =>
-          ['TRANSACTION_TRAVEL_RULE_ATTACHED', 'TRANSACTION_SCREENING', 'TRANSACTION_BROADCAST'].includes(a),
+          // TRAVEL_RULE_ATTACHED is the attach's own audit action (there is
+          // no TRANSACTION_TRAVEL_RULE_ATTACHED state transition — the attach
+          // path goes TRAVEL_RULE_CHECK → SCREENING → BROADCAST directly).
+          ['TRAVEL_RULE_ATTACHED', 'TRANSACTION_SCREENING', 'TRANSACTION_BROADCAST'].includes(a),
         );
     };
 
@@ -114,7 +127,9 @@ test.describe('RS-05 Travel-Rule gate fail-closed', () => {
 
     // Recovery: the attach lands as a FIRST attach (201, no conflict) — proof
     // no partial Travel-Rule record survived the torn request — and the gate
-    // opens through the full progression exactly once.
+    // opens through the full progression exactly once. (Accepted risk in the
+    // transport-retry wrapper: a stale pooled socket dies on write BEFORE the
+    // request is sent, so the one retry cannot double-attach.)
     const attached = await retryOnceOnTransportError('RS-05', () =>
       opsPlane.post<Withdrawal>(`/withdrawals/${txId}/travel-rule`, {
         body: TRAVEL_RULE_BODY(fx.runId),
@@ -127,6 +142,7 @@ test.describe('RS-05 Travel-Rule gate fail-closed', () => {
       BALANCE_SETTLED,
     );
     const after = await gateTransitions();
+    expect(after.filter((a) => a === 'TRAVEL_RULE_ATTACHED')).toHaveLength(1);
     expect(after.filter((a) => a === 'TRANSACTION_SCREENING')).toHaveLength(1);
     expect(after.filter((a) => a === 'TRANSACTION_BROADCAST')).toHaveLength(1);
   });
