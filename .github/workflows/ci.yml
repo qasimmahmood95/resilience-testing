@@ -29,13 +29,9 @@ jobs:
       - name: Run resilience suite
         run: npx playwright test
 
-      # M5 promotes this to a separate REQUIRED job (milestone-plan.md); a step
-      # here keeps M2-M4 honest without a second stack bring-up per run.
-      - name: Run falsification harness (every test must fail under sabotage)
-        run: npm run falsify
-
       - name: Dump stack logs on failure
-        if: failure()
+        # cancelled() covers the timeout-minutes kill path, where logs matter most.
+        if: failure() || cancelled()
         run: docker compose logs --no-color --tail 200
 
       - name: Publish Playwright report
@@ -45,6 +41,41 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+      - name: Tear down
+        if: always()
+        run: npm run stack:down
+
+  # Separate required job (milestone-plan.md M5): the falsification harness
+  # gets its own clean stack, so a vacuous test cannot hide behind state left
+  # by the main suite. Mark BOTH jobs required in branch protection; the
+  # in-repo merge protocol (CLAUDE.md) already treats them as such.
+  falsify:
+    runs-on: ubuntu-latest
+    # Worst case: 12 scenarios x 300s spawn budget (falsify.ts) + build/boot.
+    # Healthy runs finish in ~6 min; this is the pathological ceiling.
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Bring up a clean stack
+        run: npm run stack:up
+
+      - name: Run falsification harness (every test must fail under sabotage)
+        run: npm run falsify
+
+      - name: Dump stack logs on failure
+        # cancelled() covers the timeout-minutes kill path, where logs matter most.
+        if: failure() || cancelled()
+        run: docker compose logs --no-color --tail 200
 
       - name: Tear down
         if: always()
