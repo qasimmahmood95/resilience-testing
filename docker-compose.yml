@@ -18,10 +18,15 @@ services:
       VAULTCHAIN_ENV: dev
     # No `ports:` on purpose — access only via toxiproxy planes.
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      # 127.0.0.1, not localhost: musl/Alpine can resolve localhost to ::1
+      # first, Fastify binds IPv4 0.0.0.0 only, and busybox wget does not fall
+      # back to the next address — so a `localhost` probe never turns healthy
+      # (observed: CI run 29644907610, server up, 24 straight probe failures).
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
       interval: 5s
       timeout: 3s
       retries: 24 # first boot runs migrate+seed; allow up to ~2 min
+      start_period: 15s
 
   toxiproxy:
     image: ghcr.io/shopify/toxiproxy:2.12.0
