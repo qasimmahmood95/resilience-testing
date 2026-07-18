@@ -45,6 +45,12 @@ from source, pending a dedicated reproduction.
 ## F-03 — No server-side request timeout (slow-loris tolerance)
 
 - **Status:** confirmed (source + RS-08 empirical floor).
+- **Evidence:** RS-08 (`tests/rs08-slow-request-body.spec.ts`) trickles a
+  ~6 KB body at 1 KB/s; the suite's CI runs hold its ≥4.39 s transfer floor
+  with a typed 400 after full receipt, and in local measurement the 400
+  arrives after ~6 s with the server holding the connection throughout.
+  Source: `buildApp()` passes no timeout options and Fastify's defaults
+  assign `requestTimeout: 0` to the Node server.
 - **What:** `buildApp()` sets no Fastify `requestTimeout`/`connectionTimeout`
   (both default to 0 = unlimited). A request body trickled at 1 KB/s is
   accepted and held open; RS-08 demonstrates a ~6 s trickle being served
@@ -67,6 +73,18 @@ from source, pending a dedicated reproduction.
   fields instead of rejecting the request. Observed in RS-08 development: a
   `POST /withdrawals` carrying an unknown `padding` field returned **201**,
   not 400.
+- **Evidence (captured 2026-07-18, pinned commit):** `POST /withdrawals` with
+  the misspelled field `"idempotency_key": "f04-key-12345678"` (valid
+  otherwise) →
+
+  ```text
+  status:201
+  state: PENDING_APPROVAL  idempotencyKey: null
+  ```
+
+  The withdrawal was created, the misspelled key silently discarded, and the
+  stored `idempotencyKey` is `null` — a retry of this request would
+  double-create.
 - **Impact:** an integrator who misspells an optional field gets silent
   acceptance — worst case `idempotencyKey` (e.g. `idempotency_key`), where the
   request succeeds but is **not idempotent**, so a retry double-creates. This
@@ -81,6 +99,15 @@ from source, pending a dedicated reproduction.
 - **What:** there is no `GET /accounts` (list) route — only `POST /accounts`
   and `GET /accounts/{id}`. A client (or operator) cannot discover account
   ids through the API; they must be captured out-of-band at creation time.
+- **Evidence (captured 2026-07-18, admin key):**
+
+  ```text
+  GET /accounts → status:404
+  {"message":"Route GET:/accounts not found","error":"Not Found","statusCode":404}
+  ```
+
+  (Note the shape: Fastify's default 404, not the platform's own
+  `problem+json` envelope — a second, smaller contract inconsistency.)
 - **Impact:** an external integrator recovering from state loss cannot
   re-enumerate their own accounts; this suite provisions fresh accounts per
   test and records ids from creation responses to work around it.

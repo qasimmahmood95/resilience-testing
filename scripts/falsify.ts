@@ -44,20 +44,42 @@ function runSabotaged(id: string, grep: string): Verdict {
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 300_000,
   });
-  if (run.error !== undefined) return { kind: 'harness-failure', reason: `spawn error: ${run.error.message}` };
-  if (run.status === null) return { kind: 'harness-failure', reason: `killed (signal ${run.signal ?? 'unknown'})` };
+  // On any non-detection outcome, surface the child's own output — a bare
+  // verdict with no diagnostics is useless in CI.
+  const dumpChild = (why: string): void => {
+    console.error(`--- ${id}: ${why}; child output follows ---`);
+    if (run.stdout) console.error(run.stdout.slice(-4_000));
+    if (run.stderr) console.error(run.stderr.slice(-4_000));
+    console.error(`--- end ${id} child output ---`);
+  };
+
+  if (run.error !== undefined) {
+    dumpChild(`spawn error: ${run.error.message}`);
+    return { kind: 'harness-failure', reason: `spawn error: ${run.error.message}` };
+  }
+  if (run.status === null) {
+    dumpChild(`killed (signal ${run.signal ?? 'unknown'})`);
+    return { kind: 'harness-failure', reason: `killed (signal ${run.signal ?? 'unknown'})` };
+  }
 
   let stats: { expected: number; unexpected: number; skipped: number; flaky: number };
   try {
     const report = JSON.parse(run.stdout) as { stats: typeof stats };
     stats = report.stats;
   } catch {
+    dumpChild(`unparseable reporter output (exit ${run.status})`);
     return { kind: 'harness-failure', reason: `unparseable reporter output (exit ${run.status})` };
   }
 
   const ran = stats.expected + stats.unexpected + stats.flaky;
-  if (ran === 0) return { kind: 'harness-failure', reason: `grep '${grep}' matched no tests` };
-  if (stats.unexpected === 0) return { kind: 'vacuous', ran };
+  if (ran === 0) {
+    dumpChild(`grep '${grep}' matched no tests`);
+    return { kind: 'harness-failure', reason: `grep '${grep}' matched no tests` };
+  }
+  if (stats.unexpected === 0) {
+    dumpChild(`VACUOUS: ${ran} test(s) passed with sabotage active`);
+    return { kind: 'vacuous', ran };
+  }
   return { kind: 'detected', ran, failed: stats.unexpected };
 }
 
