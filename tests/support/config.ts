@@ -1,7 +1,7 @@
-// Stack endpoints and seeded credentials. Everything here is mock/fictional —
+// Stack endpoints and seeded credentials. Everything here is mock/fictional -
 // VaultChain prints these keys in its own seed output on purpose.
 
-/** Traffic planes (Toxiproxy proxies — see ADR-0002 and toxiproxy/proxies.json). */
+/** Traffic planes (Toxiproxy proxies - see ADR-0002 and toxiproxy/proxies.json). */
 // 127.0.0.1, not localhost: dual-stack resolution can pay a Happy-Eyeballs
 // ::1 fallback (~250ms) on first connect, which would pollute fast-path
 // timing assertions with a variable that has nothing to do with the SUT.
@@ -28,7 +28,7 @@ export const NEVER_TOXIFIED: ProxyName = 'control-plane';
 
 /**
  * Deterministic seeded API keys (VaultChain scripts/seed-lib.ts, RNG seed 42).
- * Mock credentials for a fictional platform — safe to commit by design.
+ * Mock credentials for a fictional platform - safe to commit by design.
  */
 export const API_KEYS = {
   admin: 'vck_admin_0000000000000000',
@@ -52,7 +52,7 @@ export const BUDGET_FAST_MS = 2_000;
  * FAST_PATH_CEILING_MS: what "undegraded" means in timing assertions.
  * Derivation: healthy round-trip is <50ms locally; 500ms = 10x headroom for
  * CI noise while staying unambiguously below any toxic latency we inject
- * (smoke uses 1500ms — 3x this ceiling). Callers must warm the connection
+ * (smoke uses 1500ms - 3x this ceiling). Callers must warm the connection
  * pool with one unmeasured request before asserting against this.
  */
 export const FAST_PATH_CEILING_MS = 500;

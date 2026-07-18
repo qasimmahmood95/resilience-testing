@@ -1,21 +1,21 @@
 /**
- * RS-08 — slow-loris-shaped request body (trickled upload)
+ * RS-08 - slow-loris-shaped request body (trickled upload)
  *
  * Failure injected:   bandwidth toxic 1 KB/s, upstream, client-plane; the
  *                     client sends a ~6 KB JSON body, so the server receives
  *                     it over ~6 seconds.
  * Expected behaviour: VaultChain accepts the trickle and still answers with a
  *                     typed problem+json (the body carries a pattern-violating
- *                     `amount`, so 400 after full receipt) — degraded ingress
+ *                     `amount`, so 400 after full receipt) - degraded ingress
  *                     never produces a hang for OTHER callers or an untyped
  *                     error for this one.
- * Invariant:          (a) isolation — the ops plane stays fast while the
+ * Invariant:          (a) isolation - the ops plane stays fast while the
  *                     trickle is in flight; (b) typed errors survive
  *                     degradation. Server-side ingress boundedness itself is
- *                     NOT asserted: VaultChain configures no request timeout —
+ *                     NOT asserted: VaultChain configures no request timeout -
  *                     recorded as a finding (docs/FINDINGS.md), with the
  *                     trickle tolerance below as its empirical evidence.
- * Falsification:      FALSIFY=RS-08 skips the toxic — the upload-duration
+ * Falsification:      FALSIFY=RS-08 skips the toxic - the upload-duration
  *                     floor assertion must fail (the body arrives instantly).
  */
 import { BUDGET_FAST_MS, FAST_PATH_CEILING_MS } from './support/config.js';
@@ -25,7 +25,7 @@ import { expect, test } from './fixtures/index.js';
 
 /** Upstream trickle rate. */
 const RATE_KBPS = 1;
-/** Padding bytes: ~6 KB at 1 KB/s ≈ 6s of upload — long enough to probe under, short enough for CI. */
+/** Padding bytes: ~6 KB at 1 KB/s ≈ 6s of upload - long enough to probe under, short enough for CI. */
 const PADDING_BYTES = 6_000;
 /**
  * Floor for the degraded upload. Deliberately conservative: toxiproxy paces
@@ -55,7 +55,7 @@ test.describe('RS-08 slow request body', () => {
 
     // An invalid `amount` (pattern violation) forces a 400 that the server
     // can only produce after receiving the whole trickled body. NOTE: an
-    // *unknown* field would NOT work here — VaultChain's Fastify/AJV config
+    // *unknown* field would NOT work here - VaultChain's Fastify/AJV config
     // silently STRIPS unknown fields rather than rejecting them despite
     // `additionalProperties: false` (observed: 201 with a `padding` field).
     // That is itself a finding (docs/FINDINGS.md F-04): a misspelled
@@ -75,8 +75,8 @@ test.describe('RS-08 slow request body', () => {
 
     // Warm the ops-plane connection pool off the clock (FAST_PATH_CEILING_MS
     // contract), then: while the trickle is in flight (it holds the wire for
-    // ≥ MIN_UPLOAD_MS, and these probes complete well inside that window),
-    // the ops plane must be unaffected — no head-of-line blocking across planes.
+    // >= MIN_UPLOAD_MS, and these probes complete well inside that window),
+    // the ops plane must be unaffected - no head-of-line blocking across planes.
     await opsPlane.get('/health');
     for (let probe = 0; probe < 3; probe += 1) {
       const p0 = performance.now();
@@ -92,7 +92,7 @@ test.describe('RS-08 slow request body', () => {
     expect(elapsed).toBeGreaterThanOrEqual(MIN_UPLOAD_MS);
 
     // Typed even under degradation: problem+json 400 for the pattern-violating
-    // amount — never a hang, a reset, or a bare 500.
+    // amount - never a hang, a reset, or a bare 500.
     expect(res.status).toBe(400);
     expect(res.contentType).toContain('application/problem+json');
 

@@ -1,21 +1,21 @@
 /**
- * RS-06 — compliance hold release with a torn response
+ * RS-06 - compliance hold release with a torn response
  *
  * Failure injected:   limit_data toxic (64 bytes), DOWNSTREAM, ops-plane:
  *                     the officer's release COMMITS server-side (hold
  *                     resolved, withdrawal broadcast, balance debited) but
  *                     the response is torn.
  * Expected behaviour: the officer cannot know the outcome; the retry is
- *                     answered by a typed 409 `hold-not-open` — never a
+ *                     answered by a typed 409 `hold-not-open` - never a
  *                     second release, never a second debit.
  * Invariant:          hold resolution is EXACTLY-ONCE under ambiguity: hold
  *                     is RELEASED, exactly one HOLD_RELEASED audit row,
- *                     exactly one debit, and the retry is a typed conflict —
+ *                     exactly one debit, and the retry is a typed conflict -
  *                     never a second effect. (Deliberately NOT claimed:
- *                     atomicity of the compound release→broadcast operation —
+ *                     atomicity of the compound release->broadcast operation -
  *                     VaultChain runs those as separate DB transactions; see
  *                     finding F-08.)
- * Falsification:      FALSIFY=RS-06 skips the cut — the release-must-die-at-
+ * Falsification:      FALSIFY=RS-06 skips the cut - the release-must-die-at-
  *                     transport assertion fires (it just succeeds).
  */
 import { API_KEYS } from './support/config.js';
@@ -27,11 +27,11 @@ import { expect, test } from './fixtures/index.js';
 
 /**
  * CUT_AFTER_BYTES: 64 is smaller than any complete HTTP status-line + headers
- * block, so no complete response can ever cross the cut — the commit is
+ * block, so no complete response can ever cross the cut - the commit is
  * DETERMINISTICALLY invisible to the officer, never "sometimes readable".
  */
 const CUT_AFTER_BYTES = 64;
-/** Below the 1000.00 dual-approval threshold → a single approval suffices. */
+/** Below the 1000.00 dual-approval threshold -> a single approval suffices. */
 const AMOUNT = '500.00';
 const DEPOSIT = '100000.00';
 /** 10 bps fee on 500.00 = 0.50; debit happens at (post-release) broadcast. */
@@ -109,7 +109,7 @@ test.describe('RS-06 hold release under ambiguity', () => {
       ),
     ).toBe(true);
 
-    // Ground truth: the release happened — atomically and completely.
+    // Ground truth: the release happened - atomically and completely.
     // Hold RELEASED, withdrawal broadcast+debited, exactly one audit row.
     expect((await control.get<Hold>(`/holds/${hold.id}`)).body?.state).toBe('RELEASED');
     expect((await control.get<Withdrawal>(`/withdrawals/${txId}`)).body?.state).toBe('PENDING_CONFIRMATION');
@@ -117,7 +117,7 @@ test.describe('RS-06 hold release under ambiguity', () => {
 
     if (toxic !== null) await toxics.remove('ops-plane', toxic.name);
 
-    // The officer's retry: a typed 409 `hold-not-open` — the ambiguity is
+    // The officer's retry: a typed 409 `hold-not-open` - the ambiguity is
     // resolved by the API's answer, not by a second effect.
     const retry = await retryOnceOnTransportError('RS-06', () =>
       opsPlane.post<Problem>(`/holds/${hold.id}/release`, { apiKey: API_KEYS.compliance }),

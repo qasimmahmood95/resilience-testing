@@ -1,5 +1,5 @@
 /**
- * RS-04 — dual approval under an ambiguous first approval
+ * RS-04 - dual approval under an ambiguous first approval
  *
  * Failure injected:   limit_data toxic (64 bytes), downstream, ops-plane:
  *                     operator A's approval COMMITS server-side but the
@@ -12,8 +12,8 @@
  * Invariant:          maker-checker survives ambiguity: exactly 2 audited
  *                     approvals by distinct approvers, exactly one debit of
  *                     amount + fee, and every retry answered with problem+json
- *                     conflicts — never double-counted, never hung.
- * Falsification:      FALSIFY=RS-04 skips the toxic — the
+ *                     conflicts - never double-counted, never hung.
+ * Falsification:      FALSIFY=RS-04 skips the toxic - the
  *                     first-approval-must-die-at-transport assertion fires.
  */
 import { API_KEYS } from './support/config.js';
@@ -24,11 +24,11 @@ import type { Problem } from './support/vaultchain.js';
 import { expect, test } from './fixtures/index.js';
 
 const CUT_AFTER_BYTES = 64;
-/** 1500.00 GBPX ≥ the 1000.00 dual-approval threshold → 2 distinct approvers. */
+/** 1500.00 GBPX >= the 1000.00 dual-approval threshold -> 2 distinct approvers. */
 const AMOUNT = '1500.00';
-/** Flat 10 bps fee → 1.50 on 1500.00. */
+/** Flat 10 bps fee -> 1.50 on 1500.00. */
 const FEE = '1.50';
-/** Provisioned deposit; final balance must be exactly DEPOSIT − AMOUNT − FEE. */
+/** Provisioned deposit; final balance must be exactly DEPOSIT - AMOUNT - FEE. */
 const DEPOSIT = '100000.00';
 const FINAL_BALANCE = '98498.50';
 
@@ -96,7 +96,7 @@ test.describe('RS-04 dual approval under ambiguity', () => {
 
     if (toxic !== null) await toxics.remove('ops-plane', toxic.name);
 
-    // A's retry: answered by the unique-approver constraint — a typed 409,
+    // A's retry: answered by the unique-approver constraint - a typed 409,
     // not a second approval, not a hang.
     const aRetry = await retryOnceOnTransportError('RS-04:retryA', () =>
       opsPlane.post<Problem>(`/withdrawals/${txId}/approvals`, {
@@ -118,7 +118,7 @@ test.describe('RS-04 dual approval under ambiguity', () => {
     expect(bApproval.status).toBe(201);
     expect(bApproval.body?.state).toBe('PENDING_CONFIRMATION');
 
-    // B's late retry: approvals are closed — typed 409 again.
+    // B's late retry: approvals are closed - typed 409 again.
     const bRetry = await opsPlane.post<Problem>(`/withdrawals/${txId}/approvals`, {
       body: { decision: 'APPROVE' },
       apiKey: API_KEYS.operatorB,

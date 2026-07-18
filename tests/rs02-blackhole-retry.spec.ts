@@ -1,7 +1,7 @@
 /**
- * RS-02 — black-holed client plane, then idempotent retry
+ * RS-02 - black-holed client plane, then idempotent retry
  *
- * Failure injected:   timeout toxic (timeout: 0 — accept the connection,
+ * Failure injected:   timeout toxic (timeout: 0 - accept the connection,
  *                     deliver nothing, hold forever), upstream, client-plane.
  * Expected behaviour: the client aborts at ITS deadline (typed TimeoutError,
  *                     never an unbounded hang); the server never saw the
@@ -9,7 +9,7 @@
  *                     idempotency key succeeds.
  * Invariant:          bounded waiting + exactly-once creation: 0 transactions
  *                     while dark, exactly 1 after the retry.
- * Falsification:      FALSIFY=RS-02 skips the toxic — the "first attempt must
+ * Falsification:      FALSIFY=RS-02 skips the toxic - the "first attempt must
  *                     abort" assertion fails (the request just succeeds).
  */
 import { BUDGET_FAST_MS } from './support/config.js';
@@ -21,7 +21,7 @@ import { expect, test } from './fixtures/index.js';
 /**
  * ABORT_BUDGET_MS: how long the client waits before giving up on a dark
  * plane. Healthy round-trips observe <50ms locally, so 1500ms is ~30x
- * headroom — a healthy plane can never trip this; only the black hole can.
+ * headroom - a healthy plane can never trip this; only the black hole can.
  * Kept below BUDGET_FAST_MS so a mis-routed healthy request fails the fast
  * assertions before it could be mistaken for a dark-plane abort.
  */
@@ -51,7 +51,7 @@ test.describe('RS-02 black hole + idempotent retry', () => {
           attributes: { timeout: 0 },
         });
 
-    // Attempt 1: the plane is dark. The client must abort at its own budget —
+    // Attempt 1: the plane is dark. The client must abort at its own budget -
     // a typed timeout, not a hang and not a mangled success.
     await expect(
       clientPlane.post('/withdrawals', { body, budgetMs: ABORT_BUDGET_MS }),
@@ -65,13 +65,13 @@ test.describe('RS-02 black hole + idempotent retry', () => {
 
     // Attempt 2: same idempotency key, after recovery. Removing a timeout
     // toxic severs the connections it held, so undici's keep-alive pool can
-    // hand this request a dead socket ("other side closed") — an ambiguous
+    // hand this request a dead socket ("other side closed") - an ambiguous
     // transport failure, the EXACT case idempotency keys exist for.
     const retry = await retryOnceOnTransportError('RS-02', () =>
       clientPlane.post<Withdrawal>('/withdrawals', { body }),
     );
     // 201 (fresh create) is the common case; 200 is legitimate when a prior
-    // attempt's bytes actually reached VaultChain before its socket died —
+    // attempt's bytes actually reached VaultChain before its socket died -
     // e.g. data buffered by the timeout toxic delivered on removal. Either
     // way the exactly-once claim is carried by the count/replay assertions.
     expect([200, 201]).toContain(retry.status);

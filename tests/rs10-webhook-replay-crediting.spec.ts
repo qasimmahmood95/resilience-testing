@@ -1,5 +1,5 @@
 /**
- * RS-10 — at-least-once delivery vs exactly-once crediting
+ * RS-10 - at-least-once delivery vs exactly-once crediting
  *
  * Failure injected:   delivery-layer fault, not a network toxic: the same
  *                     `deposit.credited` webhook delivery is replayed N times
@@ -8,12 +8,12 @@
  *                     replay path is the control plane BY DESIGN (F-01: no
  *                     injectable internal boundary), so no toxic applies.
  * Expected behaviour: every duplicate delivery is accepted without error.
- * Invariant:          **exactly-once crediting** — the wallet balance is
+ * Invariant:          **exactly-once crediting**: the wallet balance is
  *                     unchanged by every replay; duplicate deliveries feed an
  *                     idempotent credit handler, never a second credit.
  * Falsification:      FALSIFY=RS-10 registers N FRESH deposits (distinct
- *                     chainTxRefs — legitimately defeating the dedupe
- *                     surface) instead of replaying — the balance-unchanged
+ *                     chainTxRefs - legitimately defeating the dedupe
+ *                     surface) instead of replaying - the balance-unchanged
  *                     assertion fires, demonstrating what double-crediting
  *                     looks like.
  */
@@ -55,7 +55,7 @@ test.describe('RS-10 webhook replay crediting', () => {
     if (baseline.body === undefined) throw new Error('wallet read failed');
     const balanceAfterCredit = baseline.body.balance;
 
-    // Find the recorded delivery for OUR deposit — matched by chainTxRef in
+    // Find the recorded delivery for OUR deposit - matched by chainTxRef in
     // the payload, not by wallet: subscriptions persist across runs against
     // the same stack, so the wallet may have OTHER recorded deliveries (e.g.
     // the provisioning deposit's).
@@ -65,7 +65,7 @@ test.describe('RS-10 webhook replay crediting', () => {
 
     if (!sabotaged('RS-10')) {
       // The scenario: the SAME delivery arrives N more times. Each replay
-      // must provably REACH the credit handler and be deduplicated there —
+      // must provably REACH the credit handler and be deduplicated there -
       // 'already-credited' is the idempotency surface answering; any other
       // reason means the replay short-circuited and this test proved nothing.
       for (let i = 0; i < REPLAYS; i += 1) {
@@ -79,7 +79,7 @@ test.describe('RS-10 webhook replay crediting', () => {
         );
       }
     } else {
-      // Sabotage: N genuinely NEW deposits — the credit handler SHOULD credit
+      // Sabotage: N genuinely NEW deposits - the credit handler SHOULD credit
       // these, so the balance-unchanged assertion below must fail.
       for (let i = 0; i < REPLAYS; i += 1) {
         await control.post(`/wallets/${fx.walletId}/deposits/simulate`, {

@@ -1,15 +1,15 @@
 /**
- * RS-12 — degraded edge vs degraded service
+ * RS-12 - degraded edge vs degraded service
  *
  * Failure injected:   timeout toxic (hold forever), upstream, client-plane.
  * Expected behaviour: liveness probes through the degraded edge fail fast at
  *                     the prober's budget; the same probe through a healthy
- *                     path answers 200 immediately — CONCURRENTLY.
+ *                     path answers 200 immediately - CONCURRENTLY.
  * Invariant:          the health signal is trustworthy: an operator can
  *                     distinguish "the edge to clients is dead" from "the
  *                     service is dead", because observation through a healthy
  *                     path stays intact while the degraded path times out.
- * Falsification:      FALSIFY=RS-12 skips the toxic — the degraded-probe
+ * Falsification:      FALSIFY=RS-12 skips the toxic - the degraded-probe
  *                     abort assertion must fail (the probe just succeeds).
  */
 import { FAST_PATH_CEILING_MS } from './support/config.js';
@@ -39,7 +39,7 @@ test.describe('RS-12 health distinguishability', () => {
 
     // Same instant, both paths: the degraded edge must abort at the prober's
     // budget while the healthy path answers fast. Sequencing them would prove
-    // less — the point is that the service is demonstrably up WHILE the
+    // less - the point is that the service is demonstrably up WHILE the
     // client edge is demonstrably dark.
     const darkProbe = expect(
       clientPlane.get('/health', { budgetMs: PROBE_BUDGET_MS }),

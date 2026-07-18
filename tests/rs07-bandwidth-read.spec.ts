@@ -1,14 +1,14 @@
 /**
- * RS-07 — bandwidth-starved reads and resumable pagination
+ * RS-07 - bandwidth-starved reads and resumable pagination
  *
  * Failure injected:   bandwidth toxic (RATE_KBPS), downstream, client-plane.
  * Expected behaviour: a large read completes slowly-but-intact within a
  *                     budget derived from measured payload size; an
  *                     under-budgeted read aborts cleanly (typed timeout).
- * Invariant:          throttling never corrupts data — the degraded payload
+ * Invariant:          throttling never corrupts data - the degraded payload
  *                     is identical in content to the clean-plane read, and
  *                     post-recovery pagination is complete and duplicate-free.
- * Falsification:      FALSIFY=RS-07 skips the toxic — the transfer-time floor
+ * Falsification:      FALSIFY=RS-07 skips the toxic - the transfer-time floor
  *                     assertion must fail (the read is too fast).
  */
 import { BUDGET_FAST_MS } from './support/config.js';
@@ -17,7 +17,7 @@ import { provisionFundedClient, type Withdrawal } from './support/provision.js';
 import type { VcResponse } from './support/vaultchain.js';
 import { expect, test } from './fixtures/index.js';
 
-/** Throttle rate. 16 KB/s makes a ~30+KB page take seconds — measurable, not glacial. */
+/** Throttle rate. 16 KB/s makes a ~30+KB page take seconds - measurable, not glacial. */
 const RATE_KBPS = 16;
 /**
  * How many withdrawals to provision: >100 (one full page + remainder) so
@@ -61,7 +61,7 @@ test.describe('RS-07 bandwidth-starved reads', () => {
     expect(clean.status).toBe(200);
     if (clean.body === undefined) throw new Error('truth read had no body');
     // Transfer-time floor: payload bytes at RATE_KBPS. Conservative on
-    // purpose — toxiproxy paces at rate x 1000 bytes/s while we divide by
+    // purpose - toxiproxy paces at rate x 1000 bytes/s while we divide by
     // 1024 (~2.4% of the slack); the rest absorbs chunk-pacing granularity.
     // Only the toxic can make the read this slow.
     const minTransferMs = (clean.bytes / (RATE_KBPS * 1024)) * 1000 * 0.75;
@@ -81,7 +81,7 @@ test.describe('RS-07 bandwidth-starved reads', () => {
       clientPlane.get(path, { budgetMs: Math.round(minTransferMs / 3) }),
     ).rejects.toThrow(/timeout|abort/i);
 
-    // Adequately-budgeted read: slow but INTACT — identical ids in identical order.
+    // Adequately-budgeted read: slow but INTACT - identical ids in identical order.
     const t0 = performance.now();
     const throttled = await clientPlane.get<Page>(path, {
       budgetMs: Math.round(minTransferMs * 3) + BUDGET_FAST_MS,
@@ -92,7 +92,7 @@ test.describe('RS-07 bandwidth-starved reads', () => {
     expect(throttled.body?.items.map((w) => w.id)).toEqual(clean.body.items.map((w) => w.id));
     expect(throttled.bytes).toBe(clean.bytes);
 
-    // Recovery: full pagination on the client plane — complete, no duplicates.
+    // Recovery: full pagination on the client plane - complete, no duplicates.
     if (toxic !== null) await toxics.remove('client-plane', toxic.name);
     const seen = new Set<string>();
     let cursor: string | null = null;

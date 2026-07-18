@@ -1,16 +1,16 @@
 /**
- * RS-01 — high latency on the client plane
+ * RS-01 - high latency on the client plane
  *
- * Failure injected:   latency 2000ms (jitter 0 — determinism policy; the
- *                     scenario table's ±500ms jitter is deliberately dropped:
+ * Failure injected:   latency 2000ms (jitter 0 - determinism policy; the
+ *                     scenario table's +/-500ms jitter is deliberately dropped:
  *                     unseedable randomness buys no extra coverage here),
  *                     downstream, client-plane.
  * Expected behaviour: the withdrawal completes slowly but correctly within an
  *                     explicit raised budget; the response is intact.
- * Invariant:          degradation is SLOW, not WRONG — exactly one transaction
+ * Invariant:          degradation is SLOW, not WRONG - exactly one transaction
  *                     is created, response fields are exact, and ground truth
  *                     (control plane) agrees with the degraded response.
- * Falsification:      FALSIFY=RS-01 skips the toxic — the elapsed-time floor
+ * Falsification:      FALSIFY=RS-01 skips the toxic - the elapsed-time floor
  *                     assertion must fail (a fast pass proves the test cannot
  *                     detect a missing fault).
  */
@@ -25,7 +25,7 @@ const LATENCY_MS = 2_000;
 const DEGRADED_BUDGET_MS = LATENCY_MS + BUDGET_FAST_MS;
 
 test.describe('RS-01 latency', () => {
-  test('a slow plane yields a slow, correct withdrawal — not a wrong one', async ({
+  test('a slow plane yields a slow, correct withdrawal - not a wrong one', async ({
     toxics,
     clientPlane,
     control,

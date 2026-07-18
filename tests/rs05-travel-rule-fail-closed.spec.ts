@@ -1,17 +1,17 @@
 /**
- * RS-05 — Travel-Rule attach torn mid-request: the gate must stay closed
+ * RS-05 - Travel-Rule attach torn mid-request: the gate must stay closed
  *
  * Failure injected:   limit_data toxic (64 bytes), UPSTREAM, ops-plane: the
  *                     officer's attach request dies before the body arrives.
  * Expected behaviour: the attach fails at the transport layer; VaultChain
  *                     never sees a complete request.
- * Invariant:          **fail closed** — the withdrawal cannot leave
+ * Invariant:          **fail closed**: the withdrawal cannot leave
  *                     TRAVEL_RULE_CHECK: state unchanged, zero gate-opening
  *                     transitions audited, balance untouched, and no partial
  *                     Travel-Rule record (proven by the recovery attach
- *                     succeeding as a FIRST attach, 201 — a partial record
+ *                     succeeding as a FIRST attach, 201 - a partial record
  *                     would collide with the per-direction unique constraint).
- * Falsification:      FALSIFY=RS-05 skips the cut — the attach succeeds and
+ * Falsification:      FALSIFY=RS-05 skips the cut - the attach succeeds and
  *                     the must-die-at-transport assertion fires.
  */
 import { API_KEYS } from './support/config.js';
@@ -23,13 +23,13 @@ import { expect, test } from './fixtures/index.js';
 /**
  * CUT_AFTER_BYTES: 64 is smaller than this request's line alone
  * (`POST /withdrawals/<uuid>/travel-rule HTTP/1.1` ≈ 75 bytes), so no
- * complete request can ever cross the cut — Fastify DETERMINISTICALLY never
+ * complete request can ever cross the cut - Fastify DETERMINISTICALLY never
  * dispatches the handler; there is no "sometimes the body squeaks through".
  */
 const CUT_AFTER_BYTES = 64;
 const AMOUNT = '1500.00';
 const DEPOSIT = '100000.00';
-/** Untouched while the gate holds; DEPOSIT − 1500.00 − 1.50 after it opens. */
+/** Untouched while the gate holds; DEPOSIT - 1500.00 - 1.50 after it opens. */
 const BALANCE_GATED = '100000.00';
 const BALANCE_SETTLED = '98498.50';
 
@@ -89,8 +89,8 @@ test.describe('RS-05 Travel-Rule gate fail-closed', () => {
         .map((e) => e.action)
         .filter((a) =>
           // TRAVEL_RULE_ATTACHED is the attach's own audit action (there is
-          // no TRANSACTION_TRAVEL_RULE_ATTACHED state transition — the attach
-          // path goes TRAVEL_RULE_CHECK → SCREENING → BROADCAST directly).
+          // no TRANSACTION_TRAVEL_RULE_ATTACHED state transition - the attach
+          // path goes TRAVEL_RULE_CHECK -> SCREENING -> BROADCAST directly).
           ['TRAVEL_RULE_ATTACHED', 'TRANSACTION_SCREENING', 'TRANSACTION_BROADCAST'].includes(a),
         );
     };
@@ -105,7 +105,7 @@ test.describe('RS-05 Travel-Rule gate fail-closed', () => {
         });
 
     // The officer's attach is torn mid-request: it must die at the transport
-    // layer — the server never receives a complete body.
+    // layer - the server never receives a complete body.
     expect(
       await diedAtTransport(() =>
         opsPlane.post(`/withdrawals/${txId}/travel-rule`, {
@@ -125,8 +125,8 @@ test.describe('RS-05 Travel-Rule gate fail-closed', () => {
 
     if (toxic !== null) await toxics.remove('ops-plane', toxic.name);
 
-    // Recovery: the attach lands as a FIRST attach (201, no conflict) — proof
-    // no partial Travel-Rule record survived the torn request — and the gate
+    // Recovery: the attach lands as a FIRST attach (201, no conflict) - proof
+    // no partial Travel-Rule record survived the torn request - and the gate
     // opens through the full progression exactly once. (Accepted risk in the
     // transport-retry wrapper: a stale pooled socket dies on write BEFORE the
     // request is sent, so the one retry cannot double-attach.)

@@ -1,18 +1,18 @@
 /**
- * RS-09 — asymmetric partition: clients dark, compliance healthy
+ * RS-09 - asymmetric partition: clients dark, compliance healthy
  *
  * Failure injected:   timeout toxic (hold forever), upstream, client-plane
- *                     ONLY — the ops plane stays healthy. A realistic partial
+ *                     ONLY - the ops plane stays healthy. A realistic partial
  *                     outage: the customer edge is down, internal operations
  *                     are not.
  * Expected behaviour: client requests abort at their budgets; the compliance
  *                     officer's hold-resolution workflow proceeds unimpeded
  *                     on the ops plane.
- * Invariant:          segregation of duties survives partial degradation —
+ * Invariant:          segregation of duties survives partial degradation -
  *                     a client-plane outage can neither block nor corrupt
  *                     compliance resolution, and the reconnecting client
  *                     observes the correctly-resolved state.
- * Falsification:      FALSIFY=RS-09 skips the toxic — the client-plane
+ * Falsification:      FALSIFY=RS-09 skips the toxic - the client-plane
  *                     dark-probe assertion fires (the probe just succeeds).
  */
 import { API_KEYS, FAST_PATH_CEILING_MS } from './support/config.js';
@@ -42,7 +42,7 @@ test.describe('RS-09 asymmetric partition', () => {
     cleanSimState,
   }) => {
     // Clears the global one-shot screeningNext slot (cross-test poisoning
-    // guard — see RS-06).
+    // guard - see RS-06).
     void cleanSimState;
     const fx = await provisionFundedClient(control, { depositAmount: DEPOSIT });
 
@@ -86,7 +86,7 @@ test.describe('RS-09 asymmetric partition', () => {
     ).rejects.toThrow(/timeout|abort/i);
 
     // ...while the officer's workflow runs at full speed on the ops plane:
-    // read the hold, release it — both fast, both correct. (Warm-up first,
+    // read the hold, release it - both fast, both correct. (Warm-up first,
     // per FAST_PATH_CEILING_MS's contract.)
     await opsPlane.get('/health', { apiKey: API_KEYS.compliance });
     const t0 = performance.now();
@@ -110,7 +110,7 @@ test.describe('RS-09 asymmetric partition', () => {
     );
 
     // The partition heals; the reconnecting client sees the resolved state.
-    // (Removing a timeout toxic severs held connections — the reconnect may
+    // (Removing a timeout toxic severs held connections - the reconnect may
     // hit a poisoned pooled socket once; see transport.ts.)
     await toxics.removeAllApplied();
     const reconnected = await retryOnceOnTransportError('RS-09', () =>

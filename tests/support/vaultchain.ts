@@ -1,5 +1,5 @@
 // Plane-aware VaultChain API client. Every request carries an explicit budget
-// (AbortSignal.timeout) — a hang is a test failure, never a silent stall.
+// (AbortSignal.timeout) - a hang is a test failure, never a silent stall.
 
 import { BUDGET_FAST_MS, PLANES, type PlaneName } from './config.js';
 

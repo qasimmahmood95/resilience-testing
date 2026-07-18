@@ -2,12 +2,12 @@
 //
 // For each scenario, re-run its spec with FALSIFY=<id>, which activates the
 // documented sabotage inside the test (typically: the toxic is silently not
-// applied). Under sabotage the test MUST fail — a test that still passes with
+// applied). Under sabotage the test MUST fail - a test that still passes with
 // its fault removed cannot detect the fault and is worthless. The harness
 // exits non-zero (failing the build) if ANY scenario survives sabotage.
 //
 // Exit codes are NOT trusted as detection: `playwright test --grep` with zero
-// matches also exits 1, and a crashed/timed-out spawn has status null — both
+// matches also exits 1, and a crashed/timed-out spawn has status null - both
 // must read as harness failures, never as "OK, it failed under sabotage". The
 // JSON reporter's stats are the evidence: at least one test must have RUN and
 // at least one must have FAILED.
@@ -16,7 +16,7 @@
 
 import { spawnSync } from 'node:child_process';
 
-/** Scenario id → grep that selects exactly that spec. */
+/** Scenario id -> grep that selects exactly that spec. */
 const SCENARIOS: readonly { id: string; grep: string }[] = [
   { id: 'RS-01', grep: 'RS-01' },
   { id: 'RS-02', grep: 'RS-02' },
@@ -44,7 +44,7 @@ function runSabotaged(id: string, grep: string): Verdict {
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 300_000,
   });
-  // On any non-detection outcome, surface the child's own output — a bare
+  // On any non-detection outcome, surface the child's own output - a bare
   // verdict with no diagnostics is useless in CI.
   const dumpChild = (why: string): void => {
     console.error(`--- ${id}: ${why}; child output follows ---`);
@@ -89,14 +89,14 @@ for (const scenario of SCENARIOS) {
   const verdict = runSabotaged(scenario.id, scenario.grep);
   switch (verdict.kind) {
     case 'detected':
-      console.log(`  ${scenario.id}: OK — ${verdict.failed}/${verdict.ran} test(s) failed under sabotage`);
+      console.log(`  ${scenario.id}: OK - ${verdict.failed}/${verdict.ran} test(s) failed under sabotage`);
       break;
     case 'vacuous':
-      console.error(`  ${scenario.id}: VACUOUS — ${verdict.ran} test(s) PASSED with the fault removed`);
+      console.error(`  ${scenario.id}: VACUOUS - ${verdict.ran} test(s) PASSED with the fault removed`);
       vacuousOrBroken += 1;
       break;
     case 'harness-failure':
-      console.error(`  ${scenario.id}: HARNESS FAILURE — ${verdict.reason}`);
+      console.error(`  ${scenario.id}: HARNESS FAILURE - ${verdict.reason}`);
       vacuousOrBroken += 1;
       break;
   }
@@ -108,4 +108,4 @@ if (vacuousOrBroken > 0) {
   );
   process.exit(1);
 }
-console.log('\nAll scenarios fail under sabotage — no vacuous passes.');
+console.log('\nAll scenarios fail under sabotage - no vacuous passes.');
