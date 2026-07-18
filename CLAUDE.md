@@ -89,10 +89,11 @@ Useful VaultChain facts (verified against source at the pinned commit):
 ## Commands (once scaffolded — M1)
 
 ```bash
-docker compose up -d --wait     # toxiproxy + vaultchain (remote git build context)
+npm run stack:up                # toxiproxy + vaultchain (remote git build context)
 npx playwright test             # full resilience suite
-npm run falsify                 # falsification harness: every test must FAIL
-docker compose down -v          # clean slate (SQLite state dies with container)
+npm run falsify                 # falsification harness (lands with the first
+                                # scenario suite, M2; required CI job by M5)
+npm run stack:down              # clean slate (SQLite state dies with container)
 ```
 
 ## Subagent protocol
