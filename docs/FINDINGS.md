@@ -115,3 +115,24 @@ from source, pending a dedicated reproduction.
   `GET /wallets/{id}/ledger` (paged like `/audit`), turning the invariant
   into an externally checkable contract.
 
+## F-08 — Hold release→broadcast is not atomic
+
+- **Status:** confirmed by inspection (`src/services/lifecycle.ts`,
+  `releaseHold`); surfaced by the RS-06 review. Executable evidence would
+  need a dedicated scenario (candidate for a future RS).
+- **What:** releasing a hold runs as TWO separate DB transactions:
+  `resolveHoldCore` commits `hold → RELEASED` (with its audit row), and only
+  then does `broadcastWithdrawal` attempt the debit + `BROADCAST` transition
+  in its own transaction. If the second step fails — reachable at the edge by
+  draining the wallet with another withdrawal between `HELD` and the release,
+  making the debit throw `insufficient-funds` — the hold is RELEASED while
+  the transaction is stuck `HELD`: a half-completed resolution the officer
+  sees as a 422.
+- **Impact:** the officer's mental model ("release = the withdrawal
+  proceeds") can silently diverge from state; no automatic reconciliation
+  exists for a RELEASED hold on a HELD transaction. RS-06 therefore asserts
+  **exactly-once** resolution, deliberately not atomicity.
+- **Upstream shape of a fix:** run `resolveHoldCore` and
+  `broadcastWithdrawal` in one transaction, or make release re-check
+  broadcastability first and refuse (409) when the debit cannot succeed.
+
