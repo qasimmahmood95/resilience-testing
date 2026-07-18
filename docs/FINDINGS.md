@@ -98,3 +98,20 @@ from source, pending a dedicated reproduction.
   compounded by F-04, which silently discards a misspelled key.
 - **Upstream shape of a fix:** require the key on `POST /withdrawals` (breaking
   change), or at minimum document the retry contract prominently in the spec.
+
+## F-07 — Ledger sub-ledger is not externally readable
+
+- **Status:** confirmed (no route in `src/routes/` touches ledger entries).
+- **What:** the platform's headline invariant — `Σ(ledger entries for a
+  wallet) == wallet.balance`, per asset, always — cannot be verified by an
+  external consumer: there is no API that returns ledger entries. VaultChain's
+  own suite asserts it via direct DB access, which an integrator (and this
+  repo, by its hard limits) does not have.
+- **Impact:** external reconciliation/audit tooling cannot exist against this
+  API. This suite asserts **balance conservation** instead (RS-11 pins the
+  single-withdrawal case exactly: `final = deposit − amount − fee`) — a
+  strictly weaker external proxy than ledger reconciliation.
+- **Upstream shape of a fix:** a read-only, tenant-scoped
+  `GET /wallets/{id}/ledger` (paged like `/audit`), turning the invariant
+  into an externally checkable contract.
+
