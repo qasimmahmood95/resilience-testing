@@ -34,6 +34,9 @@ test.describe('RS-12 health distinguishability', () => {
       });
     }
 
+    // Warm the control-plane pool off the clock (FAST_PATH_CEILING_MS contract).
+    await control.get('/health');
+
     // Same instant, both paths: the degraded edge must abort at the prober's
     // budget while the healthy path answers fast. Sequencing them would prove
     // less — the point is that the service is demonstrably up WHILE the
