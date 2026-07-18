@@ -15,6 +15,7 @@
 import { BUDGET_FAST_MS } from './support/config.js';
 import { sabotaged } from './support/falsify.js';
 import { countByIdempotencyKey, provisionFundedClient, type Withdrawal } from './support/provision.js';
+import { retryOnceOnTransportError } from './support/transport.js';
 import { expect, test } from './fixtures/index.js';
 
 /**
@@ -65,16 +66,10 @@ test.describe('RS-02 black hole + idempotent retry', () => {
     // Attempt 2: same idempotency key, after recovery. Removing a timeout
     // toxic severs the connections it held, so undici's keep-alive pool can
     // hand this request a dead socket ("other side closed") — an ambiguous
-    // transport failure, the EXACT case idempotency keys exist for. A real
-    // integrator retries transport errors; model that explicitly, bounded to
-    // one extra attempt on a fresh socket.
-    let retry: Awaited<ReturnType<typeof clientPlane.post<Withdrawal>>>;
-    try {
-      retry = await clientPlane.post<Withdrawal>('/withdrawals', { body });
-    } catch (err) {
-      console.log(`[RS-02] transport error on post-recovery retry (${String(err)}) — one fresh-socket retry`);
-      retry = await clientPlane.post<Withdrawal>('/withdrawals', { body });
-    }
+    // transport failure, the EXACT case idempotency keys exist for.
+    const retry = await retryOnceOnTransportError('RS-02', () =>
+      clientPlane.post<Withdrawal>('/withdrawals', { body }),
+    );
     // 201 (fresh create) is the common case; 200 is legitimate when a prior
     // attempt's bytes actually reached VaultChain before its socket died —
     // e.g. data buffered by the timeout toxic delivered on removal. Either
