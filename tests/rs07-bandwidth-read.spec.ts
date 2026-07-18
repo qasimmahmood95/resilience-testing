@@ -60,8 +60,10 @@ test.describe('RS-07 bandwidth-starved reads', () => {
     const clean = await control.get<Page>(path);
     expect(clean.status).toBe(200);
     if (clean.body === undefined) throw new Error('truth read had no body');
-    // Transfer-time floor: payload bytes at RATE_KBPS, with 25% slack for
-    // toxiproxy's chunked pacing. Only the toxic can make the read this slow.
+    // Transfer-time floor: payload bytes at RATE_KBPS. Conservative on
+    // purpose — toxiproxy paces at rate x 1000 bytes/s while we divide by
+    // 1024 (~2.4% of the slack); the rest absorbs chunk-pacing granularity.
+    // Only the toxic can make the read this slow.
     const minTransferMs = (clean.bytes / (RATE_KBPS * 1024)) * 1000 * 0.75;
     expect(minTransferMs).toBeGreaterThan(BUDGET_FAST_MS / 2); // payload big enough to measure
 

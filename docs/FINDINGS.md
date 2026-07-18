@@ -89,7 +89,8 @@ from source, pending a dedicated reproduction.
 
 ## F-06 — `idempotencyKey` is optional (keyless retries double-create by design)
 
-- **Status:** confirmed (documented behaviour, pinned by test in M3 / RS-03).
+- **Status:** confirmed by inspection (`src/routes/withdrawals.ts` schema:
+  key absent from `required`); executable reproduction lands with RS-03 (M3).
 - **What:** `POST /withdrawals` treats `idempotencyKey` as optional
   (minLength 8 when present). Without one, an ambiguous-outcome retry (e.g.
   response lost after commit) creates a second withdrawal.

@@ -29,6 +29,8 @@ jobs:
       - name: Run resilience suite
         run: npx playwright test
 
+      # M5 promotes this to a separate REQUIRED job (milestone-plan.md); a step
+      # here keeps M2-M4 honest without a second stack bring-up per run.
       - name: Run falsification harness (every test must fail under sabotage)
         run: npm run falsify
 

@@ -19,9 +19,10 @@ import { expect, test } from './fixtures/index.js';
 
 /**
  * ABORT_BUDGET_MS: how long the client waits before giving up on a dark
- * plane. Must exceed any healthy round-trip (BUDGET_FAST_MS covers that with
- * 40x headroom over observed latency) yet keep the test fast. A healthy plane
- * can never trip this; only the black hole can.
+ * plane. Healthy round-trips observe <50ms locally, so 1500ms is ~30x
+ * headroom — a healthy plane can never trip this; only the black hole can.
+ * Kept below BUDGET_FAST_MS so a mis-routed healthy request fails the fast
+ * assertions before it could be mistaken for a dark-plane abort.
  */
 const ABORT_BUDGET_MS = 1_500;
 
@@ -74,7 +75,11 @@ test.describe('RS-02 black hole + idempotent retry', () => {
       console.log(`[RS-02] transport error on post-recovery retry (${String(err)}) — one fresh-socket retry`);
       retry = await clientPlane.post<Withdrawal>('/withdrawals', { body });
     }
-    expect(retry.status).toBe(201);
+    // 201 (fresh create) is the common case; 200 is legitimate when a prior
+    // attempt's bytes actually reached VaultChain before its socket died —
+    // e.g. data buffered by the timeout toxic delivered on removal. Either
+    // way the exactly-once claim is carried by the count/replay assertions.
+    expect([200, 201]).toContain(retry.status);
     expect(retry.body?.idempotencyKey).toBe(idempotencyKey);
     expect(await countByIdempotencyKey(control, fx.walletId, idempotencyKey)).toBe(1);
 

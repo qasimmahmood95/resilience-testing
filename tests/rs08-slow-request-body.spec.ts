@@ -5,9 +5,10 @@
  *                     client sends a ~6 KB JSON body, so the server receives
  *                     it over ~6 seconds.
  * Expected behaviour: VaultChain accepts the trickle and still answers with a
- *                     typed problem+json (the body carries an unknown field,
- *                     so 400) — degraded ingress never produces a hang for
- *                     OTHER callers or an untyped error for this one.
+ *                     typed problem+json (the body carries a pattern-violating
+ *                     `amount`, so 400 after full receipt) — degraded ingress
+ *                     never produces a hang for OTHER callers or an untyped
+ *                     error for this one.
  * Invariant:          (a) isolation — the ops plane stays fast while the
  *                     trickle is in flight; (b) typed errors survive
  *                     degradation. Server-side ingress boundedness itself is
@@ -26,7 +27,12 @@ import { expect, test } from './fixtures/index.js';
 const RATE_KBPS = 1;
 /** Padding bytes: ~6 KB at 1 KB/s ≈ 6s of upload — long enough to probe under, short enough for CI. */
 const PADDING_BYTES = 6_000;
-/** Floor for the degraded upload, with 25% slack for toxiproxy chunk pacing. */
+/**
+ * Floor for the degraded upload. Deliberately conservative: toxiproxy paces
+ * at rate x 1000 bytes/s while we divide by 1024 (~2.4% of the slack), and
+ * the remaining margin absorbs chunk-pacing granularity. Real transfers run
+ * ~1.37x this floor.
+ */
 const MIN_UPLOAD_MS = (PADDING_BYTES / (RATE_KBPS * 1024)) * 1000 * 0.75;
 
 test.describe('RS-08 slow request body', () => {
@@ -67,9 +73,11 @@ test.describe('RS-08 slow request body', () => {
       budgetMs: Math.round(MIN_UPLOAD_MS * 3) + BUDGET_FAST_MS,
     });
 
-    // While the trickle is in flight (it holds the wire for ≥ MIN_UPLOAD_MS,
-    // and these three probes complete well inside that window), the ops plane
-    // must be entirely unaffected — no head-of-line blocking across planes.
+    // Warm the ops-plane connection pool off the clock (FAST_PATH_CEILING_MS
+    // contract), then: while the trickle is in flight (it holds the wire for
+    // ≥ MIN_UPLOAD_MS, and these probes complete well inside that window),
+    // the ops plane must be unaffected — no head-of-line blocking across planes.
+    await opsPlane.get('/health');
     for (let probe = 0; probe < 3; probe += 1) {
       const p0 = performance.now();
       const ops = await opsPlane.get('/health');
@@ -83,8 +91,8 @@ test.describe('RS-08 slow request body', () => {
     // The toxic actually bit: the upload took at least the trickle time.
     expect(elapsed).toBeGreaterThanOrEqual(MIN_UPLOAD_MS);
 
-    // Typed even under degradation: problem+json 400 for the unknown field —
-    // never a hang, a reset, or a bare 500.
+    // Typed even under degradation: problem+json 400 for the pattern-violating
+    // amount — never a hang, a reset, or a bare 500.
     expect(res.status).toBe(400);
     expect(res.contentType).toContain('application/problem+json');
 
