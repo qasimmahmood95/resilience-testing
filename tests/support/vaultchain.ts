@@ -16,6 +16,8 @@ export interface VcResponse<T = unknown> {
   /** Parsed JSON body; undefined when the body is empty or not JSON. */
   body: T | undefined;
   contentType: string;
+  /** Raw response body size in bytes (drives bandwidth-toxic budget maths). */
+  bytes: number;
 }
 
 export interface RequestOptions {
@@ -48,7 +50,7 @@ export class VaultChainClient {
     if (text.length > 0 && contentType.includes('json')) {
       body = JSON.parse(text) as T;
     }
-    return { status: res.status, body, contentType };
+    return { status: res.status, body, contentType, bytes: Buffer.byteLength(text) };
   }
 
   get<T = unknown>(path: string, opts?: RequestOptions): Promise<VcResponse<T>> {

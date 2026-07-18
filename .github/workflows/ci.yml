@@ -29,6 +29,9 @@ jobs:
       - name: Run resilience suite
         run: npx playwright test
 
+      - name: Run falsification harness (every test must fail under sabotage)
+        run: npm run falsify
+
       - name: Dump stack logs on failure
         if: failure()
         run: docker compose logs --no-color --tail 200

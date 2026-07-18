@@ -10,12 +10,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
+    "falsify": "tsx scripts/falsify.ts",
     "stack:up": "docker compose up -d --wait --wait-timeout 300",
     "stack:down": "docker compose down -v"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@types/node": "^22.18.0",
+    "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   }
 }
