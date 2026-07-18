@@ -1,0 +1,23 @@
+{
+  "name": "resilience-testing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Failure-mode test suite for VaultChain: Toxiproxy fault injection + Playwright assertions on behaviour under failure.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "falsify": "tsx scripts/falsify.ts",
+    "stack:up": "docker compose up -d --wait --wait-timeout 300",
+    "stack:down": "docker compose down -v"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
